@@ -1,5 +1,7 @@
 # reinforcement_learning
-Playing around with Reinforcement Learning
+Playing around with Reinforcement Learning, running n-bandits simulations.
+
+Based on "Reinforcement Learning - An Introduction" by Sutton and Brato.
 
 # Running
 ```bash
