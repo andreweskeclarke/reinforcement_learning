@@ -4,84 +4,70 @@ import matplotlib.pyplot as plt
 import argparse
 import argparse
 
-
-class Bandit:
-    def __init__(self):
-        self.rgenerator = random.SystemRandom()
-        self.mu = self.rgenerator.uniform(0,5)
-        self.sigma = self.rgenerator.random() # 0-1
-
-    def get_val(self):
-        return self.rgenerator.gauss(self.mu, self.sigma)
-
-class NBandits:
-
-    def __init__(self, n):
-        self.n = n
-        self.bandits = list()
-        for i in range(0,n):
-            self.bandits.append(Bandit())
-
-        mus = [b.mu for b in self.bandits]
-        self.opt_action = mus.index(max(mus))
-
-    def val(self, action):
-        # action is index of bdt
-        return self.bandits[action].get_val()
-
-    def __len__(self):
-        return len(self.bandits)
-
-    def was_act_opt(self, action):
-        return action == self.opt_action
+from bandits import NBandits, Bandit
 
 class Agent:
-    def __init__(self, bdts, eps):
-        self.bdts = bdts
+    def __init__(self, epsilon, actions):
         self.rgen = random.SystemRandom()
-        self.actions = range(0,len(self.bdts))
-        self.avg_rs = [5 for a in self.actions]
-        self.n_obs = [0 for a in self.actions]
-        self.eps = eps
-        self.last_act_was_opt = False
-    
-    def tick(self):
-        action = self.choose()
-        r = self.take(action)
-        self.update(action, r)
+        self.actions = actions
+        self.avg_rewards = [5 for a in self.actions]
+        self.n_observations = [0 for a in self.actions]
+        self.epsilon = epsilon
+        self.action_history = list()
+
+    def __choose_exploitative_action__(self):
+        return self.avg_rewards.index(max(self.avg_rewards))
+
+    def __choose_exploratory_action__(self):
+        return self.rgen.choice(self.actions)
+
+    def __should_exploit__(self):
+        return self.rgen.random() < (1 - self.epsilon)
 
     def choose(self):
-        if self.rgen.random() < (1 - self.eps):
-            return self.avg_rs.index(max(self.avg_rs))
-        return self.actions[int(floor(self.rgen.uniform(0,len(self.bdts))))]
+        if self.__should_exploit__():
+            self.action_history.append(self.__choose_exploitative_action__())
+        else:
+            self.action_history.append(self.__choose_exploratory_action__())
+        return self.action_history[-1]
+
+    def update(self, reward, state=None):
+        last_action = self.action_history[-1]
+        avg = self.avg_rewards[last_action]
+        self.n_observations[last_action] += 1
+        self.avg_rewards[last_action] = avg + (reward - avg)/self.n_observations[last_action]
+
+class Environment:
+    def __init__(self, bandits):
+        self.bandits = bandits
+
+    def possible_actions(self):
+        return range(0, len(self.bandits))
 
     def take(self, action):
-        return self.bdts.val(action) # action is index of bdt
-
-    def update(self, action, r):
-        avg = self.avg_rs[action]
-        n_obs = self.n_obs[action] + 1
-        self.avg_rs[action] = avg + (r - avg)/n_obs
-        self.n_obs[action] += 1
-        self.last_act_was_opt = self.bdts.was_act_opt(action)
+        was_action_optimal = self.bandits.is_action_optimal(action)
+        return self.bandits.take(action), was_action_optimal
 
 class Sim:
     def __init__(self, n_bdts, n_runs, n_plays, eps):
         self.n_bdts = n_bdts
-        self.n_runs = n_runs
-        self.n_runs_f = float(n_runs)
+        self.n_runs = float(n_runs)
         self.n_plays = n_plays
         self.eps = eps
 
     def run(self):
-        avgs = [0] * self.n_plays
-        for run in range(0,self.n_runs):
-            agt = Agent(NBandits(self.n_bdts), self.eps)
+        optimal_choice_rates = [0] * self.n_plays
+        for run in range(0,int(self.n_runs)):
+            bandits = NBandits(self.n_bdts)
+            env = Environment(bandits)
+            agent = Agent(self.eps, env.possible_actions())
             for i in range(0,self.n_plays):
-                agt.tick()
-                if agt.last_act_was_opt:
-                    avgs[i] = avgs[i] + (1/self.n_runs_f)
-        return avgs
+                action = agent.choose()
+                reward, was_optimal = env.take(action)
+                agent.update(reward)
+                if was_optimal:
+                    optimal_choice_rates[i] += (1/self.n_runs)
+        return optimal_choice_rates
         
 def main():
     parser = argparse.ArgumentParser(description='Sim')
