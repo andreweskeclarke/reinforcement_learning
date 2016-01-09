@@ -40,10 +40,10 @@ class Sim:
         
 def main():
     parser = argparse.ArgumentParser(description='Sim')
-    parser.add_argument('--bdts', type=int, help='Number of bdts to use')
+    parser.add_argument('--bdts', type=int, help='Number of bandits to use in the simulation')
     parser.add_argument('--runs', type=int, help='Number of runs to make')
     parser.add_argument('--plays', type=int, help='Number of plays per run')
-    parser.add_argument('--eps', type=float, help='Greedy Epsilon')
+    parser.add_argument('--eps', type=float, help='Epsilon value for an e-greedy agent')
     args = parser.parse_args()
 
     print("Start sim")
