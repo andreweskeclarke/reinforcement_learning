@@ -2,40 +2,9 @@ from math import floor
 import random
 import matplotlib.pyplot as plt
 import argparse
-import argparse
 
 from bandits import NBandits, Bandit
-
-class Agent:
-    def __init__(self, epsilon, actions):
-        self.rgen = random.SystemRandom()
-        self.actions = actions
-        self.avg_rewards = [5 for a in self.actions]
-        self.n_observations = [0 for a in self.actions]
-        self.epsilon = epsilon
-        self.action_history = list()
-
-    def __choose_exploitative_action__(self):
-        return self.avg_rewards.index(max(self.avg_rewards))
-
-    def __choose_exploratory_action__(self):
-        return self.rgen.choice(self.actions)
-
-    def __should_exploit__(self):
-        return self.rgen.random() < (1 - self.epsilon)
-
-    def choose(self):
-        if self.__should_exploit__():
-            self.action_history.append(self.__choose_exploitative_action__())
-        else:
-            self.action_history.append(self.__choose_exploratory_action__())
-        return self.action_history[-1]
-
-    def update(self, reward, state=None):
-        last_action = self.action_history[-1]
-        avg = self.avg_rewards[last_action]
-        self.n_observations[last_action] += 1
-        self.avg_rewards[last_action] = avg + (reward - avg)/self.n_observations[last_action]
+from agents import Agent, EGreedyAgent
 
 class Environment:
     def __init__(self, bandits):
@@ -60,7 +29,7 @@ class Sim:
         for run in range(0,int(self.n_runs)):
             bandits = NBandits(self.n_bdts)
             env = Environment(bandits)
-            agent = Agent(self.eps, env.possible_actions())
+            agent = EGreedyAgent(self.eps, env.possible_actions())
             for i in range(0,self.n_plays):
                 action = agent.choose()
                 reward, was_optimal = env.take(action)
