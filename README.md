@@ -11,5 +11,8 @@ source activate reinf
 
 # Running
 ```bash
-python runner.py --bdts=5 --eps=0.1 --runs=100 --plays=5500
+python runner.py
 ```
+
+# Configuration
+All settings are in the settings.yml file, and should be self-evident
