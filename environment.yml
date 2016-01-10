@@ -21,5 +21,6 @@ dependencies:
 - tk=8.5.18=0
 - wheel=0.26.0=py35_1
 - xz=5.0.5=0
+- yaml=0.1.6=0
 - zlib=1.2.8=0
 

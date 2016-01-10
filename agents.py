@@ -1,12 +1,13 @@
+import math
 import random
 
 class Agent:
-    def __init__(self, epsilon, actions):
+    def __init__(self, actions, options={}):
         self.rgen = random.SystemRandom() # cryptographically secure, unlike random
         self.actions = actions
-        self.avg_rewards = [5 for a in self.actions]
+        self.avg_rewards = [0 for a in self.actions]
         self.n_observations = [0 for a in self.actions]
-        self.epsilon = epsilon
+        self.epsilon = options['epsilon']
         self.action_history = list()
 
     def __choose_exploitative_action__(self):
@@ -32,8 +33,8 @@ class Agent:
         self.avg_rewards[last_action] = avg + (reward - avg)/self.n_observations[last_action]
 
 class EGreedyAgent(Agent):
-    def __init__(self, epsilon, actions):
-        super(EGreedyAgent, self).__init__(epsilon, actions)
+    def __init__(self, actions, options={}):
+        super(EGreedyAgent, self).__init__(actions, options)
 
     def __choose_exploitative_action__(self):
         return self.avg_rewards.index(max(self.avg_rewards))
@@ -43,3 +44,15 @@ class EGreedyAgent(Agent):
 
     def __should_exploit__(self):
         return self.rgen.random() < (1 - self.epsilon)
+
+class EGreedySoftmaxAgent(EGreedyAgent):
+    def __choose_exploratory_action__(self):
+        choice = self.rgen.random()
+        cumulative_probability = 1
+        softmax_denominator = sum([math.exp(a) for a in self.avg_rewards])
+        for a in self.actions:
+            softmax_a = math.exp(self.avg_rewards[a]) / softmax_denominator
+            cumulative_probability = cumulative_probability - softmax_a
+            if cumulative_probability <= choice:
+                return a
+        assert(False)
