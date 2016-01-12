@@ -1,3 +1,4 @@
+import numpy as np
 import yaml
 from math import floor
 import random
@@ -38,8 +39,14 @@ class Sim:
                 if was_optimal:
                     self.optimal_choice_rates[i] += (1/self.n_runs)
 
+
+    def runningMean(self, x, N):
+        return np.convolve(x, np.ones((N,))/N)[(N-1):]
+
     def plot(self, color):
-        plt.plot(range(0,self.n_plays), self.optimal_choice_rates, color=color)
+        plt.plot(range(0,self.n_plays),
+                self.runningMean(self.optimal_choice_rates, 100),
+                color=color)
         
 def main():
     print("Start sim")
@@ -59,6 +66,8 @@ def main():
 
     plt.axis([0,n_plays_per_run,0,1.05])
     plt.title("NBandits Reinforcement")
+    plt.plot([0,n_plays_per_run],[0.9, 0.9], '--', color='g')
+    plt.plot([0,n_plays_per_run],[0.95, 0.95], '--', color='b')
     plt.show()
 
 if __name__ == "__main__":

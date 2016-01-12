@@ -1,6 +1,6 @@
 n_bandits: 5
 n_runs: 100
-n_plays_per_run: 3500
+n_plays_per_run: 8000
 
 experiments:
     - agent_class: EGreedyAgent
@@ -13,6 +13,11 @@ experiments:
       options:
           epsilon: 0.1
           optimistic: False
+    - agent_class: EGreedySoftmaxAgent
+      color: purple
+      options:
+          epsilon: 0.05
+          optimistic: True
     - agent_class: EGreedySoftmaxAgent
       color: red
       options:

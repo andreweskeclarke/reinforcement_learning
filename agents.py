@@ -5,6 +5,8 @@ class Agent:
     def __init__(self, actions, options={}):
         self.rgen = random.SystemRandom() # cryptographically secure, unlike random
         self.actions = actions
+        use_optimistic = 'optimistic' in options and options['optimistic']
+        initial_reward = 5 if use_optimistic else 0
         self.avg_rewards = [0 for a in self.actions]
         self.n_observations = [0 for a in self.actions]
         self.epsilon = options['epsilon']
