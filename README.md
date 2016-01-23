@@ -1,5 +1,5 @@
 # reinforcement_learning
-Playing around with Reinforcement Learning, running n-bandits simulations.
+Playing around with Reinforcement Learning, running simulations.
 
 Based on "Reinforcement Learning - An Introduction" by Sutton and Brato.
 
@@ -8,11 +8,3 @@ Based on "Reinforcement Learning - An Introduction" by Sutton and Brato.
 conda env create
 source activate reinf
 ```
-
-# Running
-```bash
-python runner.py
-```
-
-# Configuration
-All settings are in the settings.yml file, and should be self-evident
