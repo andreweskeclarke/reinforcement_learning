@@ -3,23 +3,51 @@ n_runs: 100
 n_plays_per_run: 8000
 
 experiments:
-    - agent_class: EGreedyAgent
-      color: blue
-      options:
-          epsilon: 0.05
-          optimistic: False
-    - agent_class: EGreedyAgent
-      color: green
-      options:
-          epsilon: 0.1
-          optimistic: False
-    - agent_class: EGreedySoftmaxAgent
-      color: purple
-      options:
-          epsilon: 0.05
-          optimistic: True
-    - agent_class: EGreedySoftmaxAgent
+    #- agent_class: EGreedyAgent
+    #  env_class: NBandits
+    #  color: blue
+    #  options:
+    #      epsilon: 0.05
+    #      optimistic: False
+    #  env_options: ''
+    #- agent_class: EGreedySoftmaxAgent
+    #  env_class: NBandits
+    #  color: green
+    #  options:
+    #      epsilon: 0.05
+    #      optimistic: True
+    #  env_options: ''
+    - agent_class: ReinforcementComparisonAgent
+      env_class: NBandits
       color: red
       options:
-          epsilon: 0.05
-          optimistic: False
+          alpha: 0.05
+          beta: 0.05
+          optimistic: True
+      env_options: ''
+    - agent_class: ReinforcementComparisonAgent
+      env_class: NBandits
+      color: purple
+      options:
+          alpha: 0.01
+          beta: 0.01
+          optimistic: True
+      env_options: ''
+
+    - agent_class: ReinforcementComparisonAgent
+      env_class: NBandits
+      color: blue
+      options:
+          alpha: 0.05
+          beta: 0.01
+          optimistic: True
+      env_options: ''
+    - agent_class: ReinforcementComparisonAgent
+      env_class: NBandits
+      color: green
+      options:
+          alpha: 0.01
+          beta: 0.05
+          optimistic: True
+      env_options: ''
+

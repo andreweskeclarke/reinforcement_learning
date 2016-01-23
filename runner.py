@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import argparse
 
 from bandits import NBandits, Bandit
-from agents import Agent, EGreedyAgent, EGreedySoftmaxAgent
+from agents import *
 
 class Environment:
     def __init__(self, bandits):
@@ -20,16 +20,16 @@ class Environment:
         return self.bandits.take(action), was_action_optimal
 
 class Sim:
-    def __init__(self, n_bdts, n_runs, n_plays, agent_creator):
-        self.n_bdts = n_bdts
+    def __init__(self, n_runs, n_plays, bandits_creator, agent_creator):
         self.n_runs = float(n_runs)
         self.n_plays = n_plays
+        self.create_bandits = bandits_creator
         self.create_agent = agent_creator
 
     def run(self):
         self.optimal_choice_rates = [0] * self.n_plays
         for run in range(0,int(self.n_runs)):
-            bandits = NBandits(self.n_bdts)
+            bandits = self.create_bandits(None)
             env = Environment(bandits)
             agent = self.create_agent(env.possible_actions())
             for i in range(0,self.n_plays):
@@ -50,7 +50,11 @@ class Sim:
         
 def main():
     print("Start sim")
-    with open("settings.yml", 'r') as stream:
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('settings', help='Location of the settings yaml file for the desired simulation')
+    args = parser.parse_args()
+
+    with open(args.settings, 'r') as stream:
         settings = yaml.load(stream)
 
     n_bandits = settings['n_bandits']
@@ -59,7 +63,8 @@ def main():
 
     for experiment in settings['experiments']:
         print(experiment)
-        simulation = Sim(n_bandits, n_runs, n_plays_per_run,
+        simulation = Sim(n_runs, n_plays_per_run,
+                lambda _: eval(experiment['env_class'])(n_bandits, options=experiment['env_options']),
                 lambda actions: eval(experiment['agent_class'])(actions, options=experiment['options']))
         simulation.run()
         simulation.plot(experiment['color'])

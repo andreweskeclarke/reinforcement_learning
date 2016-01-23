@@ -11,7 +11,7 @@ class Bandit:
 
 class NBandits:
 
-    def __init__(self, n):
+    def __init__(self, n, options={}):
         self.n = n
         self.bandits = list()
         for i in range(0,n):
