@@ -64,6 +64,16 @@ def softmax_choice(rgen, actions, action_prefs):
             return a
     assert(False)
 
+def discrete_choice(rgen, actions, action_prefs):
+    choice = rgen.random()
+    cumulative_probability = 1
+    for a in actions:
+        cumulative_probability = cumulative_probability - action_prefs[a]
+        if cumulative_probability <= choice:
+            return a
+    assert(False)
+
+
 class EGreedySoftmaxAgent(EGreedyAgent):
     def __choose_exploratory_action__(self):
         return softmax_choice(self.rgen, self.actions, self.avg_rewards)
@@ -91,5 +101,38 @@ class ReinforcementComparisonAgent(Agent):
         self.action_preferences[self.last_action] = old_pref + self.beta * (reward - self.reference_reward)
         self.reference_reward = self.reference_reward + self.alpha * (reward - self.reference_reward)
 
+
+class PursuitAgent(Agent):
+    def __init__(self, actions, options={}):
+        super(PursuitAgent, self).__init__(actions, options)
+        use_optimistic = 'optimistic' in options and options['optimistic']
+        initial_reward = 5 if use_optimistic else 0
+        self.avg_rewards = [0 for a in self.actions]
+        self.n_observations = [0 for a in self.actions]
+        self.action_probs = [1.0/len(self.actions) for a in self.actions]
+        self.beta = options['beta']
+
+    def __choose_exploitative_action__(self):
+        raise 'Unreachable code was reached!'
+
+    def __choose_exploratory_action__(self):
+        return discrete_choice(self.rgen, self.actions, self.action_probs)
+
+    def __should_exploit__(self):
+        return False
+
+    def __update__(self, reward, state=None):
+        last_action = self.last_action
+        avg = self.avg_rewards[last_action]
+        self.n_observations[last_action] += 1
+        self.avg_rewards[last_action] = avg + (reward - avg)/self.n_observations[last_action]
+
+        max_index = self.avg_rewards.index(max(self.avg_rewards))
+        for i in range(0, len(self.action_probs)):
+            prob = self.action_probs[i]
+            if i != max_index:
+                self.action_probs[i] = prob + (self.beta * (0 - prob))
+            else:
+                self.action_probs[i] = prob + (self.beta * (1 - prob))
 
 

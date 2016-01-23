@@ -1,53 +1,27 @@
-n_bandits: 5
-n_runs: 100
-n_plays_per_run: 8000
+n_bandits: 10
+n_runs: 200
+n_plays_per_run: 10000
 
 experiments:
-    #- agent_class: EGreedyAgent
-    #  env_class: NBandits
-    #  color: blue
-    #  options:
-    #      epsilon: 0.05
-    #      optimistic: False
-    #  env_options: ''
-    #- agent_class: EGreedySoftmaxAgent
-    #  env_class: NBandits
-    #  color: green
-    #  options:
-    #      epsilon: 0.05
-    #      optimistic: True
-    #  env_options: ''
+    - agent_class: PursuitAgent
+      env_class: NBandits
+      color: blue
+      options:
+          beta: 0.001
+          optimistic: True
+      env_options: ''
+    - agent_class: EGreedySoftmaxAgent
+      env_class: NBandits
+      color: purple
+      options:
+          epsilon: 0.05
+          optimistic: True
+      env_options: ''
     - agent_class: ReinforcementComparisonAgent
       env_class: NBandits
       color: red
       options:
-          alpha: 0.05
-          beta: 0.05
+          alpha: 0.1
+          beta: 0.001
           optimistic: True
       env_options: ''
-    - agent_class: ReinforcementComparisonAgent
-      env_class: NBandits
-      color: purple
-      options:
-          alpha: 0.01
-          beta: 0.01
-          optimistic: True
-      env_options: ''
-
-    - agent_class: ReinforcementComparisonAgent
-      env_class: NBandits
-      color: blue
-      options:
-          alpha: 0.05
-          beta: 0.01
-          optimistic: True
-      env_options: ''
-    - agent_class: ReinforcementComparisonAgent
-      env_class: NBandits
-      color: green
-      options:
-          alpha: 0.01
-          beta: 0.05
-          optimistic: True
-      env_options: ''
-

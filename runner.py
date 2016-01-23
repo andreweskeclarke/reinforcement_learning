@@ -45,7 +45,7 @@ class Sim:
 
     def plot(self, color):
         plt.plot(range(0,self.n_plays),
-                self.runningMean(self.optimal_choice_rates, 100),
+                self.runningMean(self.optimal_choice_rates, 25),
                 color=color)
         
 def main():
