@@ -1,0 +1,45 @@
+n_bandits: 10
+n_runs: 200
+n_plays_per_run: 10000
+
+experiments:
+    - agent_class: ReinforcementComparisonAgent
+      env_class: NBandits
+      color: blue
+      options:
+          alpha: 0.1
+          beta: 0.01
+          optimistic: True
+      env_options: ''
+    - agent_class: ReinforcementComparisonAgent
+      env_class: NBandits
+      color: purple
+      options:
+          alpha: 0.25
+          beta: 0.001
+          optimistic: True
+      env_options: ''
+    - agent_class: ReinforcementComparisonAgent
+      env_class: NBandits
+      color: red
+      options:
+          alpha: 0.01
+          beta: 0.005
+          optimistic: True
+      env_options: ''
+    - agent_class: ReinforcementComparisonAgent
+      env_class: NBandits
+      color: orange
+      options:
+          alpha: 0.01
+          beta: 0.01
+          optimistic: True
+      env_options: ''
+    - agent_class: ReinforcementComparisonAgent
+      env_class: NBandits
+      color: yellow
+      options:
+          alpha: 0.01
+          beta: 0.05
+          optimistic: True
+      env_options: ''

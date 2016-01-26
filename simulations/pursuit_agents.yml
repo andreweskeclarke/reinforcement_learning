@@ -1,0 +1,40 @@
+n_bandits: 10
+n_runs: 300
+n_plays_per_run: 7500
+
+experiments:
+    - agent_class: PursuitAgent
+      env_class: NBandits
+      color: blue
+      options:
+          beta: 0.001
+          optimistic: True
+      env_options: ''
+    - agent_class: PursuitAgent
+      env_class: NBandits
+      color: purple
+      options:
+          beta: 0.003
+          optimistic: True
+      env_options: ''
+    - agent_class: PursuitAgent
+      env_class: NBandits
+      color: red
+      options:
+          beta: 0.005
+          optimistic: True
+      env_options: ''
+    - agent_class: PursuitAgent
+      env_class: NBandits
+      color: orange
+      options:
+          beta: 0.01
+          optimistic: True
+      env_options: ''
+    - agent_class: PursuitAgent
+      env_class: NBandits
+      color: yellow
+      options:
+          beta: 0.05
+          optimistic: True
+      env_options: ''
