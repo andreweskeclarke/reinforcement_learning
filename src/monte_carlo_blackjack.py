@@ -57,6 +57,7 @@ class Episode:
 
     def run(self):
         self.states = []
+        self.blackjack = False
         self.deal()
         self.play_player()
         self.play_dealer()
@@ -64,14 +65,16 @@ class Episode:
     def reward(self):
         player_score = score(self.player_cards)
         dealer_score = score(self.dealer_cards)
-        if player_score == dealer_score or (player_score > 21 and dealer_score > 21):
-            return 0
-        elif player_score > dealer_score and player_score <= 21:
+        if player_score > 21:
+            return -1
+        if self.blackjack or dealer_score > 21 or player_score > dealer_score:
             return 1
+        if player_score == dealer_score:
+            return 0
         return -1
 
     def play_dealer(self):
-        while score(self.dealer_cards) < 17:
+        while score(self.dealer_cards) < 17 and score(self.player_cards) < 22:
             self.dealer_cards.append(self.deck.hit())
 
     def visible_dealer_points(self):
@@ -84,6 +87,8 @@ class Episode:
                                          has_soft_ace(self.player_cards))
 
     def play_player(self):
+        if score(self.player_cards) == 21 and score(self.dealer_cards) != 21:
+            self.blackjack = True
         action = self.action()
         while action == Policy.HIT:
             self.update_states(action)
@@ -126,7 +131,7 @@ class Policy:
             greedy_action = Policy.HIT if hit_score > stick_score else Policy.STICK
             exploring_action = Policy.HIT if hit_score <= stick_score else Policy.STICK
             sample_size = min(self.action_values[hit_key]['n'], self.action_values[stick_key]['n'])
-            if self.rgen.random() > (0.4 / math.log(sample_size + 1.0)):
+            if self.rgen.random() > (1.0 - (0.5 / math.log(sample_size + 1.0))):
                 return exploring_action
             else:
                 return greedy_action
@@ -141,15 +146,20 @@ class Policy:
             n = self.action_values[a]['n']
             self.action_values[a]['reward'] = (((n-1.0) * self.action_values[a]['reward']) + float(reward)) / n
 
+    def converged(self):
+        for k, v in self.action_values.items():
+            if v['n'] < 50:
+                return False
+        return len(self.action_values) > 1
+
 def main():
     start = time.time()
     deck = Deck()
     policy = Policy()
     episode = Episode(deck, policy)
     rewards = []
-    runs = 100000
     state_values = dict()
-    for i in range(0,runs):
+    while not policy.converged():
         episode.run()
         policy.update(episode.states, episode.reward())
 
@@ -174,13 +184,12 @@ def plot_3d(values):
         value = values[v.replace('hit', 'stick')]['reward']
         if player < 21:
             value_hit = values[v.replace('stick', 'hit')]['reward']
-            value = value_hit if value_hit > value else value
+            value = max([value_hit, value])
         soft_ace = v.split('-')[2] == 'True'
         if soft_ace:
             Z1[player - 12][dealer - 1] = value
         else:
             Z2[player - 12][dealer - 1] = value
-
 
     ax1.plot_wireframe(X, Y, Z1, rstride=1, cstride=1)
     ax1.set_xlim3d(1, 10)
