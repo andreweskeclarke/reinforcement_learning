@@ -206,8 +206,9 @@ def plot_3d(values):
     ax2.set_title('No Usable Ace')
     ax2.set_xlabel('Dealer Showing')
     ax2.set_ylabel('Player Sum')
-    
+
     plt.show()
+    plt.savefig('state_value_function.png')
 
 if __name__ == "__main__":
     main()
