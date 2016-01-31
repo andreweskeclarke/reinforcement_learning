@@ -1,8 +1,32 @@
 import random
 import matplotlib.pyplot as plt
 import numpy as np
+import time
+import math
 from mpl_toolkits.mplot3d.axes3d import get_test_data
 from mpl_toolkits.mplot3d import Axes3D
+from agents import discrete_choice
+
+# TODO helper methods - probably deserve a class
+def card_point_value(card):
+    if card < 11:
+        return card
+    elif 11 <= card < 14:
+        return 10
+    else:
+        return 11
+
+def score(cards):
+    raw_score = sum([card_point_value(c) for c in cards])
+    if raw_score > 21 and 14 in cards: # Demote the first Ace
+        cards[cards.index(14)] = 1
+        return score(cards)
+    else:
+        return raw_score
+
+def has_soft_ace(cards):
+    return 14 in cards
+
 
 class Deck:
     def __init__(self):
@@ -27,8 +51,9 @@ class Deck:
                 return (card % 13) + 2
 
 class Episode:
-    def __init__(self, deck):
+    def __init__(self, deck, policy):
         self.deck = deck
+        self.policy = policy
 
     def run(self):
         self.states = []
@@ -37,100 +62,142 @@ class Episode:
         self.play_dealer()
 
     def reward(self):
-        _, player_points = self.points(self.player_cards)
-        _, dealer_points = self.points(self.dealer_cards)
-        if player_points == dealer_points or (player_points > 21 and dealer_points > 21):
+        player_score = score(self.player_cards)
+        dealer_score = score(self.dealer_cards)
+        if player_score == dealer_score or (player_score > 21 and dealer_score > 21):
             return 0
-        elif player_points > dealer_points and player_points <= 21:
+        elif player_score > dealer_score and player_score <= 21:
             return 1
-        else:
-            return -1
-
+        return -1
 
     def play_dealer(self):
-        # Dealer policy: play up to 17
-        cards = self.dealer_cards
-        cards, points = self.points(cards)
-        while points < 17:
-            cards.append(self.deck.hit())
-            cards, points = self.points(cards)
-        self.dealer_cards = cards
+        while score(self.dealer_cards) < 17:
+            self.dealer_cards.append(self.deck.hit())
 
-    def dealer_points(self):
+    def visible_dealer_points(self):
         card = self.dealer_cards[0]
-        if card == 14:
-            return 1
-        else:
-            return self.points([card])[1] # Only one dealer card visible
+        return score([card]) if card != 14 else 1 # Special code for an Ace
+
+    def action(self):
+        return self.policy.choose_action(score(self.player_cards),
+                                         self.visible_dealer_points(),
+                                         has_soft_ace(self.player_cards))
 
     def play_player(self):
-        # User policy: hit until we reach 20, 21, or go bust
-        cards = self.player_cards
-        cards, points = self.points(cards)
-        dealer_points = self.dealer_points()
-        usable_ace = 14 in cards # Ace is usable if we can drop it down to 1
-        self.states.append('{}-{}-{}'.format(points, dealer_points, usable_ace))
-        while points < 20:
-            cards.append(self.deck.hit())
-            cards, points = self.points(cards)
-            usable_ace = 14 in cards
-            self.states.append('{}-{}-{}'.format(points, dealer_points, usable_ace))
-        self.player_cards = cards
+        action = self.action()
+        while action == Policy.HIT:
+            self.update_states(action)
+            self.player_cards.append(self.deck.hit())
+            action = self.action()
+        self.update_states(action)
+
+    def update_states(self, action):
+        s = score(self.player_cards)
+        if s < 12 or s > 21:
+            return # ignore
+        self.states.append('{}-{}-{}-{}'.format(s, 
+            self.visible_dealer_points(),
+            has_soft_ace(self.player_cards),
+            action))
 
     def deal(self):
         self.deck.shuffle()
         self.dealer_cards, self.player_cards = self.deck.deal()
 
-    def points(self, cards):
-        raw_points = sum([self.card_point_value(c) for c in cards])
-        if raw_points > 21 and 14 in cards: # Demote the first Ace
-            cards[cards.index(14)] = 1
-            return self.points(cards)
-        else:
-            return cards, raw_points
+class Policy:
+    HIT = 'hit'
+    STICK = 'stick'
+    ACTIONS = [HIT, STICK]
 
-    def card_point_value(self, card):
-        if card < 11:
-            return card
-        elif 11 <= card < 14:
-            return 10
-        else:
-            return 11
+    def __init__(self):
+        self.action_values = {}
+        self.rgen = random.SystemRandom() # cryptographically secure, unlike random
+
+    def choose_action(self, score, dealer_score, soft_ace):
+        if score < 12:
+            return Policy.HIT
+        if score >= 21:
+            return Policy.STICK
+        hit_key = '{}-{}-{}-hit'.format(score, dealer_score, soft_ace)
+        stick_key = '{}-{}-{}-stick'.format(score, dealer_score, soft_ace)
+        if hit_key in self.action_values and stick_key in self.action_values:
+            hit_score = self.action_values[hit_key]['reward']
+            stick_score = self.action_values[stick_key]['reward']
+            greedy_action = Policy.HIT if hit_score > stick_score else Policy.STICK
+            exploring_action = Policy.HIT if hit_score <= stick_score else Policy.STICK
+            sample_size = min(self.action_values[hit_key]['n'], self.action_values[stick_key]['n'])
+            if self.rgen.random() > (0.4 / math.log(sample_size + 1.0)):
+                return exploring_action
+            else:
+                return greedy_action
+
+        return self.rgen.choice(Policy.ACTIONS)
+
+    def update(self, state_actions, reward):
+        for a in state_actions:
+            if a not in self.action_values:
+                self.action_values[a] = {'n':0.0, 'reward':0.0}
+            self.action_values[a]['n'] += 1.0
+            n = self.action_values[a]['n']
+            self.action_values[a]['reward'] = (((n-1.0) * self.action_values[a]['reward']) + float(reward)) / n
 
 def main():
+    start = time.time()
     deck = Deck()
-    episode = Episode(deck)
+    policy = Policy()
+    episode = Episode(deck, policy)
     rewards = []
-    runs = 500000
+    runs = 100000
     state_values = dict()
     for i in range(0,runs):
         episode.run()
-        reward = episode.reward()
-        for state in episode.states:
-            if state not in state_values:
-                state_values[state] = {'n':0.0, 'reward':0.0}
-            state_values[state]['n'] += 1.0
-            n = state_values[state]['n']
-            state_values[state]['reward'] = (((n-1.0) * state_values[state]['reward']) + float(reward)) / n
-    plot_3d(state_values)
+        policy.update(episode.states, episode.reward())
 
-def plot_3d(state_values):
+    print('Took {} seconds'.format(time.time() - start))
+    plot_3d(policy.action_values)
+
+def plot_3d(values):
     fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1, projection='3d')
-    X = np.arange(2, 31, 1)
-    Y = np.arange(1, 11, 1)
+    ax1 = fig.add_subplot(1, 2, 1, projection='3d')
+    ax2 = fig.add_subplot(1, 2, 2, projection='3d')
+    X = np.arange(1, 11, 1)
+    Y = np.arange(12, 22, 1)
     X, Y = np.meshgrid(X, Y)
-    Z = X * 0.0
-    for state in state_values:
+    Z1 = X * 0.0
+    Z2 = X * 0.0
+    for v in values:
         #'12-1-False': {'reward': 1.0, 'n': 2}
-        usable_ace = state.split('-')[2] == 'True'
-        if usable_ace:
-            player = int(state.split('-')[0])
-            dealer = int(state.split('-')[1])
-            value = state_values[state]['reward']
-            Z[dealer - 1][player - 2] = value
+        player = int(v.split('-')[0])
+        dealer = int(v.split('-')[1])
 
-    ax.plot_wireframe(X, Y, Z, rstride=1, cstride=1)
+        # Use the value of the action under a greedy policy
+        value = values[v.replace('hit', 'stick')]['reward']
+        if player < 21:
+            value_hit = values[v.replace('stick', 'hit')]['reward']
+            value = value_hit if value_hit > value else value
+        soft_ace = v.split('-')[2] == 'True'
+        if soft_ace:
+            Z1[player - 12][dealer - 1] = value
+        else:
+            Z2[player - 12][dealer - 1] = value
+
+
+    ax1.plot_wireframe(X, Y, Z1, rstride=1, cstride=1)
+    ax1.set_xlim3d(1, 10)
+    ax1.set_ylim3d(12, 21)
+    ax1.set_zlim3d(-1,1)
+    ax1.set_title('Usable Ace')
+    ax1.set_xlabel('Dealer Showing')
+    ax1.set_ylabel('Player Sum')
+
+    ax2.plot_wireframe(X, Y, Z2, rstride=1, cstride=1)
+    ax2.set_xlim3d(1, 10)
+    ax2.set_ylim3d(12, 21)
+    ax2.set_zlim3d(-1,1)
+    ax2.set_title('No Usable Ace')
+    ax2.set_xlabel('Dealer Showing')
+    ax2.set_ylabel('Player Sum')
+    
     plt.show()
 
 if __name__ == "__main__":
