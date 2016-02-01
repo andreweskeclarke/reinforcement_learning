@@ -20,6 +20,8 @@ python src/monte_carlo_blackjack.py
 ```
 
 ## Output
+The following was an attempt to recreate fig 5.5 in Sutton and Barto, using a Monte Carlo, "on-policy", e-greedy model. There seem to be a few minor differences I haven't worked out yet.
+
 ![Acton Value function for optimal policy](state_value_function.png)
 
 # N-Bandits with various learning agents
