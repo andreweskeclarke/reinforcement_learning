@@ -6,6 +6,7 @@ experiments:
     - agent_class: PursuitAgent
       env_class: NBandits
       color: blue
+      label: pursuit
       options:
           beta: 0.001
           optimistic: True
@@ -13,6 +14,7 @@ experiments:
     - agent_class: EGreedySoftmaxAgent
       env_class: NBandits
       color: purple
+      label: e-greedy
       options:
           epsilon: 0.05
           optimistic: True
@@ -20,6 +22,7 @@ experiments:
     - agent_class: ReinforcementComparisonAgent
       env_class: NBandits
       color: red
+      label: reinforcement comparison
       options:
           alpha: 0.1
           beta: 0.001

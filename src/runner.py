@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.patches as mpatches
 import yaml
 from math import floor
 import random
@@ -43,10 +44,11 @@ class Sim:
     def runningMean(self, x, N):
         return np.convolve(x, np.ones((N,))/N)[(N-1):]
 
-    def plot(self, color):
-        plt.plot(range(0,self.n_plays),
+    def plot(self, color, label):
+        return plt.plot(range(0,self.n_plays),
                 self.runningMean(self.optimal_choice_rates, 25),
-                color=color)
+                color=color,
+                label=label)
         
 def main():
     print("Start sim")
@@ -60,20 +62,24 @@ def main():
     n_bandits = settings['n_bandits']
     n_runs = settings['n_runs']
     n_plays_per_run = settings['n_plays_per_run']
-
+    patches = []
     for experiment in settings['experiments']:
         print(experiment)
         simulation = Sim(n_runs, n_plays_per_run,
                 lambda _: eval(experiment['env_class'])(n_bandits, options=experiment['env_options']),
                 lambda actions: eval(experiment['agent_class'])(actions, options=experiment['options']))
         simulation.run()
-        simulation.plot(experiment['color'])
+        simulation.plot(experiment['color'], experiment['label'])
+        patches.append(mpatches.Patch(color=experiment['color'], label=experiment['label']))
 
     plt.axis([0,n_plays_per_run,0,1.05])
     plt.title("NBandits Reinforcement")
     plt.plot([0,n_plays_per_run],[0.9, 0.9], '--', color='g')
     plt.plot([0,n_plays_per_run],[0.95, 0.95], '--', color='b')
-    plt.show()
+
+    plt.legend(handles=patches)
+    plt.savefig('images/n_bandits_solutions.png')
+    # plt.show()
 
 if __name__ == "__main__":
     main()

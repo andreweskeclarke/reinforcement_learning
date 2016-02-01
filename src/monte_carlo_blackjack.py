@@ -214,7 +214,8 @@ def plot_3d(values):
     ax2.set_xlabel('Dealer Showing')
     ax2.set_ylabel('Player Sum')
 
-    plt.savefig('state_value_function.png')
+    plt.savefig('images/state_value_function.png')
+    # plt.show()
 
 if __name__ == "__main__":
     main()
