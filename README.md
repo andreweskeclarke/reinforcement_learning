@@ -15,6 +15,7 @@ Simulate the static n-bandits problem with e-greedy, e-greedy softmax, pursuit, 
 ```bash
 python src/runner.py simulations/<your_simulation>.yml
 ```
+![Different settings](images/n_bandits_solutions.png)
 
 # Monte Carlo Blackjack (Chapter 5)
 Uses e-greedy methods to find an optimal action value function and policy.
@@ -25,4 +26,4 @@ python src/monte_carlo_blackjack.py
 
 The following was an attempt to recreate fig 5.5 in Sutton and Barto, using a Monte Carlo, "on-policy", e-greedy model. There seem to be a few minor differences I haven't worked out yet.
 
-![Acton Value function for optimal policy](state_value_function.png)
+![Acton Value function for optimal policy](images/state_value_function.png)
