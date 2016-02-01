@@ -126,17 +126,24 @@ class Policy:
         hit_key = '{}-{}-{}-hit'.format(score, dealer_score, soft_ace)
         stick_key = '{}-{}-{}-stick'.format(score, dealer_score, soft_ace)
         if hit_key in self.action_values and stick_key in self.action_values:
-            hit_score = self.action_values[hit_key]['reward']
-            stick_score = self.action_values[stick_key]['reward']
-            greedy_action = Policy.HIT if hit_score > stick_score else Policy.STICK
-            exploring_action = Policy.HIT if hit_score <= stick_score else Policy.STICK
-            sample_size = min(self.action_values[hit_key]['n'], self.action_values[stick_key]['n'])
-            if self.rgen.random() > (1.0 - (0.5 / math.log(sample_size + 1.0))):
-                return exploring_action
-            else:
-                return greedy_action
-
+            if self.should_explore(hit_key, stick_key):
+                return self.exploring_action(hit_key, stick_key)
+            return self.greedy_action(hit_key, stick_key)
         return self.rgen.choice(Policy.ACTIONS)
+
+    def exploring_action(self, hit_key, stick_key):
+        if self.action_values[hit_key]['reward'] <= self.action_values[stick_key]['reward']:
+            return Policy.HIT 
+        return Policy.STICK
+
+    def greedy_action(self, hit_key, stick_key):
+        if self.action_values[hit_key]['reward'] >= self.action_values[stick_key]['reward']:
+            return Policy.HIT 
+        return Policy.STICK
+
+    def should_explore(self, hit_key, stick_key):
+        sample_size = min(self.action_values[hit_key]['n'], self.action_values[stick_key]['n'])
+        return self.rgen.random() > (1.0 - (0.5 / math.log(sample_size + 1.0)))
 
     def update(self, state_actions, reward):
         for a in state_actions:
@@ -168,8 +175,8 @@ def main():
 
 def plot_3d(values):
     fig = plt.figure()
-    ax1 = fig.add_subplot(1, 2, 1, projection='3d')
-    ax2 = fig.add_subplot(1, 2, 2, projection='3d')
+    ax1 = fig.add_subplot(2, 1, 1, projection='3d')
+    ax2 = fig.add_subplot(2, 1, 2, projection='3d')
     X = np.arange(1, 11, 1)
     Y = np.arange(12, 22, 1)
     X, Y = np.meshgrid(X, Y)
@@ -207,7 +214,6 @@ def plot_3d(values):
     ax2.set_xlabel('Dealer Showing')
     ax2.set_ylabel('Player Sum')
 
-    plt.show()
     plt.savefig('state_value_function.png')
 
 if __name__ == "__main__":
