@@ -3,7 +3,7 @@ Playing around with Reinforcement Learning, running simulations.
 
 Based on "Reinforcement Learning - An Introduction" by Sutton and Brato.
 
-Currently has a Monte Carlo black jack simulation, and an N Bandits simulation using different Agent algorithms.
+Currently has a Monte Carlo black jack simulation from chapter 5, and an N Bandits simulation using different Agent algorithms from chapter 2.
 
 # Setup
 ```bash
