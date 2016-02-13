@@ -1,4 +1,5 @@
 import time
+import curses
 import math
 import sys
 import random
@@ -107,6 +108,10 @@ class Tetris:
         pass
 
     def play(self):
+        curses.wrapper(self.__play__)
+
+    def __play__(self, screen):
+        self.init_colors()
         board = Board()
         reward = 0
         play_on = True
@@ -114,44 +119,57 @@ class Tetris:
         board.add_tetronimo(tetronimo)
         start_time = time.time()
         ticks = 0
-        time_per_tick = 0.05
+        time_per_tick = 0.1
         while play_on:
             random.choice([lambda x:x.rotate_left(),
                            lambda x:x.rotate_right(),
                            lambda x:x.move_right(),
                            lambda x:x.move_left(),
-                           lambda x:time.sleep(0.01)])(tetronimo)
+                           lambda x:time.sleep(0.03)])(tetronimo)
             while time.time() - start_time > time_per_tick * (ticks + 1):
                 ticks += 1
                 reward += board.tick()
-                tetris_print(board)
-                print(reward)
+                tetris_print(board, reward, screen)
                 if board.should_add_tetronimo():
                     tetronimo = self.generate_tetronimo(board)
                     play_on = board.add_tetronimo(tetronimo)
 
-        tetris_print(board)
-        print(reward)
+        tetris_print(board, reward, screen)
 
     def generate_tetronimo(self, board):
         return Tetromino(board, random.choice([T, L, J, O, I, S, Z]))
 
-def tetris_print(board):
+    def init_colors(self):
+        curses.start_color()
+        curses.use_default_colors()
+        colors = [ curses.COLOR_BLUE,
+                   curses.COLOR_CYAN,
+                   curses.COLOR_GREEN,
+                   curses.COLOR_MAGENTA,
+                   curses.COLOR_RED,
+                   curses.COLOR_WHITE,
+                   curses.COLOR_YELLOW ]
+        curses.init_pair(0, curses.COLOR_WHITE, curses.COLOR_BLACK)
+        for i, c in enumerate(colors):
+            curses.init_pair(i + 1, c, curses.COLOR_BLACK)
+
+def tetris_print(board, reward, screen):
+    curses.noecho()
+    curses.curs_set(0)
+    screen.erase()
+    screen.refresh()
+    for y, row in reversed(list(enumerate(board.board_array))):
+        for x, value in enumerate(row):
+            character = "\u2588" if value else "."
+            color = curses.color_pair(value)
+            screen.addch(board.height - y, 3*x, character, color)
+            screen.addch(board.height - y, 3*x + 1, character, color)
     squares_in_play = None
     if board.current_tetronimo is not None:
-        squares_in_play = board.current_tetronimo.occupied_squares()
-    colors = [ "red", "green", "yellow", "blue", "magenta", "cyan", "white" ]
-    for y, row in reversed(list(enumerate(board.board_array))):
-        for x, pos in enumerate(row):
-            if pos > 0:
-                sys.stdout.write(colored(u"\u2588", colors[pos - 1]))
-                sys.stdout.write(colored(u"\u2588", colors[pos - 1]))
-            elif squares_in_play and any([s[0] is x and s[1] is y for s in squares_in_play]):
-                color_pos = [s[2] for s in squares_in_play if s[0] is x and s[1] is y][0] - 1
-                sys.stdout.write(colored(u"\u2588", colors[color_pos]))
-                sys.stdout.write(colored(u"\u2588", colors[color_pos]))
-            else:
-                sys.stdout.write(".")
-                sys.stdout.write(".")
-            sys.stdout.write(" ")
-        sys.stdout.write("\n")
+        for x, y, value in board.current_tetronimo.occupied_squares():
+            character = "\u2588" if value else "."
+            color = curses.color_pair(value)
+            screen.addch(board.height - y, 3*x, character, color)
+            screen.addch(board.height - y, 3*x + 1, character, color)
+    screen.addstr(board.height + 5, 0, 'Reward: {}'.format(reward))
+    screen.refresh()
