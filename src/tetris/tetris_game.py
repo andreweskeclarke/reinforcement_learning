@@ -48,7 +48,7 @@ class Tetromino:
     def occupied_squares(self, x=None, y=None, rotation_index=None):
         x = self.x if x is None else x
         y = self.y if y is None else y
-        rotation_index = rotation_index or self.rotation_index
+        rotation_index = self.rotation_index if rotation_index is None else rotation_index
         squares = []
         for index_y, row in enumerate(self.offsets[self.rotation_index]):
             for index_x, occupied in enumerate(row):
@@ -94,14 +94,15 @@ class Board:
         return self.board_array[y][x] != 0
 
     def is_out(self, x, y):
-        return 0 > y or y > self.height or x > self.width or 0 > x
+        return 0 > y or y >= self.height or x >= self.width or 0 > x
 
     def tick(self):
-        n_cleared_rows = 0
-        if not self.current_tetronimo.move_down():
-            n_cleared_rows = self.__freeze_tetronimo__()
-            self.current_tetronimo = None
-        return n_cleared_rows
+        if self.current_tetronimo is not None:
+            n_cleared_rows = 0
+            if not self.current_tetronimo.move_down():
+                n_cleared_rows = self.__freeze_tetronimo__()
+                self.current_tetronimo = None
+            return n_cleared_rows
 
 class Tetris:
     def __init__(self):
@@ -111,11 +112,18 @@ class Tetris:
         board = Board()
         reward = 0
         play_on = True
+        tetronimo = self.generate_tetronimo(board)
+        board.add_tetronimo(tetronimo)
         while play_on:
+            random.choice([lambda x:x.rotate_left(),
+                           lambda x:x.rotate_right(),
+                           lambda x:x.move_right(),
+                           lambda x:x.move_left()])(tetronimo)
+            reward += board.tick()
             if board.should_add_tetronimo():
-                play_on = board.add_tetronimo(self.generate_tetronimo(board))
-            else:
-                reward += board.tick()
+                tetronimo = self.generate_tetronimo(board)
+                play_on = board.add_tetronimo(tetronimo)
+
         self.print(board.board_array)
         print(reward)
 
