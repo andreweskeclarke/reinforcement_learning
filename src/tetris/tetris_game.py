@@ -161,7 +161,6 @@ def tetris_print(board, reward, screen):
     curses.noecho()
     curses.curs_set(0)
     screen.erase()
-    screen.refresh()
     for y, row in reversed(list(enumerate(board.board_array))):
         for x, value in enumerate(row):
             character = "\u2588" if value else "."
