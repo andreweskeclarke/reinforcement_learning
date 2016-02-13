@@ -119,13 +119,13 @@ class Tetris:
         board.add_tetronimo(tetronimo)
         start_time = time.time()
         ticks = 0
-        time_per_tick = 0.1
+        time_per_tick = 0.05
         while play_on:
             random.choice([lambda x:x.rotate_left(),
                            lambda x:x.rotate_right(),
                            lambda x:x.move_right(),
                            lambda x:x.move_left(),
-                           lambda x:time.sleep(0.03)])(tetronimo)
+                           lambda x:time.sleep(0.01)])(tetronimo)
             while time.time() - start_time > time_per_tick * (ticks + 1):
                 ticks += 1
                 reward += board.tick()
@@ -134,7 +134,11 @@ class Tetris:
                     tetronimo = self.generate_tetronimo(board)
                     play_on = board.add_tetronimo(tetronimo)
 
-        tetris_print(board, reward, screen)
+        while True:
+            tetris_print(board, reward, screen)
+            screen.addstr(board.height + 7, 0, 'GAME OVER!')
+            screen.refresh()
+            time.sleep(5)
 
     def generate_tetronimo(self, board):
         return Tetromino(board, random.choice([T, L, J, O, I, S, Z]))
