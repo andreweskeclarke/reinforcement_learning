@@ -50,7 +50,7 @@ class Tetromino:
         y = self.y if y is None else y
         rotation_index = self.rotation_index if rotation_index is None else rotation_index
         squares = []
-        for index_y, row in enumerate(self.offsets[self.rotation_index]):
+        for index_y, row in enumerate(self.offsets[rotation_index]):
             for index_x, occupied in enumerate(row):
                 if occupied:
                     # hacky math to figure out relative positions from the offsets
@@ -128,7 +128,6 @@ class Tetris:
         print(reward)
 
     def print(self, array):
-        # pprint.PrettyPrinter().pprint(board.board_array[::-1])
         colors = [ "red", "green", "yellow", "blue", "magenta", "cyan", "white" ]
         for row in reversed(array):
             for pos in row:
@@ -138,6 +137,7 @@ class Tetris:
                 else:
                     sys.stdout.write(".")
                     sys.stdout.write(".")
+                sys.stdout.write(" ")
             sys.stdout.write("\n")
 
     def generate_tetronimo(self, board):
