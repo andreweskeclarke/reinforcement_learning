@@ -42,14 +42,12 @@ class Tetromino:
         return self.move(self.x + 1, self.y)
 
     def move_down(self):
-        print("move from {},{} to {},{}: ".format(self.x, self.y, self.x, self.y - 1))
         val = self.move(self.x, self.y - 1)
-        print("{} -> end up at {},{}".format(val, self.x, self.y))
         return val
 
     def occupied_squares(self, x=None, y=None, rotation_index=None):
-        x = x or self.x
-        y = y or self.y
+        x = self.x if x is None else x
+        y = self.y if y is None else y
         rotation_index = rotation_index or self.rotation_index
         squares = []
         for index_y, row in enumerate(self.offsets[self.rotation_index]):
@@ -113,13 +111,9 @@ class Tetris:
         board = Board()
         reward = 0
         play_on = True
-        teronimos = [J]
         while play_on:
             if board.should_add_tetronimo():
-                print('=-=-=-=-Add-=-=-=-=-=-')
-                self.print(board.board_array)
-                print('')
-                play_on = board.add_tetronimo(Tetromino(board, teronimos.pop()))
+                play_on = board.add_tetronimo(self.generate_tetronimo(board))
             else:
                 reward += board.tick()
         self.print(board.board_array)
