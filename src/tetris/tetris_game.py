@@ -1,10 +1,28 @@
 import time
+import queue
 import curses
 import math
 import sys
 import random
+import threading
 from termcolor import colored, cprint
-from src.tetris.offsets import *
+from offsets import *
+
+TIME_PER_TICK = 0.05
+
+ROTATE_LEFT = 'ROTATE_LEFT'
+ROTATE_RIGHT = 'ROTATE_RIGHT'
+MOVE_RIGHT = 'MOVE_RIGHT'
+MOVE_LEFT = 'MOVE_LEFT'
+MOVE_DOWN = 'MOVE_DOWN'
+WAIT = 'WAIT'
+
+POSSIBLE_MOVES = [ ROTATE_LEFT,
+                   ROTATE_RIGHT,
+                   MOVE_RIGHT,
+                   MOVE_LEFT,
+                   MOVE_DOWN,
+                   WAIT ]
 
 class Tetromino:
     def __init__(self, board, offsets):
@@ -104,8 +122,15 @@ class Board:
             return n_cleared_rows
 
 class Tetris:
-    def __init__(self):
-        pass
+    MOVES_MAP = { ROTATE_LEFT: lambda x:x.rotate_left(),
+                  ROTATE_RIGHT: lambda x:x.rotate_right(),
+                  MOVE_RIGHT: lambda x:x.move_right(),
+                  MOVE_LEFT: lambda x:x.move_left(),
+                  MOVE_DOWN: lambda x:x.move_down(),
+                  WAIT: lambda x:time.sleep(TIME_PER_TICK) }
+    def __init__(self, actions_queue, states_queue):
+        self.actions_q = actions_queue
+        self.states_q = states_queue
 
     def play(self):
         curses.wrapper(self.__play__)
@@ -119,20 +144,27 @@ class Tetris:
         board.add_tetronimo(tetronimo)
         start_time = time.time()
         ticks = 0
-        time_per_tick = 0.05
+        action = None
         while play_on:
-            random.choice([lambda x:x.rotate_left(),
-                           lambda x:x.rotate_right(),
-                           lambda x:x.move_right(),
-                           lambda x:x.move_left(),
-                           lambda x:time.sleep(0.01)])(tetronimo)
-            while time.time() - start_time > time_per_tick * (ticks + 1):
+            old_reward = reward
+            state_t0 = board.board_array[:]
+            try:
+                action = self.actions_q.get(True, TIME_PER_TICK)
+                if action is not None:
+                    Tetris.MOVES_MAP[action](tetronimo)
+                    self.actions_q.task_done()
+            except queue.Empty:
+                pass # If no actions placed, ignore
+            while time.time() - start_time > TIME_PER_TICK * (ticks + 1):
                 ticks += 1
                 reward += board.tick()
                 tetris_print(board, reward, screen)
                 if board.should_add_tetronimo():
                     tetronimo = self.generate_tetronimo(board)
                     play_on = board.add_tetronimo(tetronimo)
+
+            state_t1 = board.board_array[:]
+            self.states_q.put([state_t0, action, reward - old_reward, state_t1])
 
         while True:
             tetris_print(board, reward, screen)
