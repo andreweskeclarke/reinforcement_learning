@@ -21,7 +21,11 @@ class Agent(threading.Thread):
         self.init_model()
         self.replay_memory = []
 
-    def choose_action(self):
+    def choose_action(self, state):
+        if bool(random.getrandbits(1)):
+            self.print_q.put('Greedy: True')
+            return np.argmax(self.model.predict(np.array([[state]]), batch_size=1, verbose=0))
+        self.print_q.put('Greedy: False')
         return random.choice(POSSIBLE_MOVES)
         
     def handle_new_state(self, state):
@@ -33,8 +37,7 @@ class Agent(threading.Thread):
             state = self.states_q.get(True)
             self.handle_new_state(state)
             self.experience_replay()
-            a = self.choose_action()
-            self.actions_q.put(a, True)
+            self.actions_q.put(self.choose_action(state[3]), True)
             self.print_q.put('{}'.format(time.time() - start))
 
     def experience_replay(self):
