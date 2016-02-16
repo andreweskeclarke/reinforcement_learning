@@ -154,23 +154,24 @@ class Tetris:
             board.add_tetronimo(tetronimo)
             ticks = 0
             actions_since_last_tick = 0
-            state_t0 = np.array(board.board_array, copy=True)
+            state_t0 = np.array(board.board_array, copy=True, ndmin=3)
             self.states_q.put([state_t0, DO_NOTHING, 0, state_t0])
             if screen is None:
                 print('Game start...')
             while play_on:
+                start = time.time()
                 action = DO_NOTHING
                 old_reward = reward
-                state_t0 = np.array(board.board_array, copy=True)
+
+                state_t0 = np.array(board.board_array, copy=True, ndmin=3)
                 merge_board_and_piece(state_t0, tetronimo)
                 if screen is not None:
                     tetris_print(state_t0, reward, screen, self.print_q)
                 try:
-                    action = self.actions_q.get(True)
+                    action = self.actions_q.get()
                     actions_since_last_tick += 1
-                    if action is not None:
-                        MOVES_MAP[action](tetronimo)
-                        self.actions_q.task_done()
+                    MOVES_MAP[action](tetronimo)
+                    self.actions_q.task_done()
                 except queue.Empty:
                     pass # If no actions placed, ignore
                 # Tick once per 4 actions
@@ -182,16 +183,19 @@ class Tetris:
                         play_on = board.add_tetronimo(tetronimo)
 
                 if play_on:
-                    state_t1 = np.array(board.board_array, copy=True)
+                    state_t1 = np.array(board.board_array, copy=True, ndmin=3)
                     merge_board_and_piece(state_t1, tetronimo)
                     self.states_q.put([state_t0, action, reward - old_reward, state_t1])
                 else:
-                    state_t1 = np.array(board.board_array, copy=True)
+                    state_t1 = np.array(board.board_array, copy=True, ndmin=3)
                     merge_board_and_piece(state_t1, tetronimo)
                     self.states_q.put([state_t0, action, -10000, state_t1])
 
+                print(time.time() - start)
+                print('')
+
             if screen is not None:
-                resting_state = np.array(board.board_array, copy=True)
+                resting_state = np.array(board.board_array, copy=True, ndmin=3)
                 merge_board_and_piece(resting_state, tetronimo)
                 tetris_print(resting_state, reward, screen, self.print_q)
                 screen.addstr(board.height + 7, 0, 'GAME OVER!')
@@ -221,7 +225,7 @@ def merge_board_and_piece(array, piece):
     if piece is None:
         return
     for x, y, value in piece.occupied_squares():
-        array[y][x] = value
+        array[0][y][x] = value
 
 def tetris_print(array, reward, screen, print_q):
     curses.noecho()
