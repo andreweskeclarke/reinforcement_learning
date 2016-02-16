@@ -156,10 +156,8 @@ class Tetris:
             actions_since_last_tick = 0
             state_t0 = np.array(board.board_array, copy=True, ndmin=3)
             self.states_q.put([state_t0, DO_NOTHING, 0, state_t0])
-            if screen is None:
-                print('Game start...')
+            start = time.time()
             while play_on:
-                start = time.time()
                 action = DO_NOTHING
                 old_reward = reward
 
@@ -191,8 +189,6 @@ class Tetris:
                     merge_board_and_piece(state_t1, tetronimo)
                     self.states_q.put([state_t0, action, -10000, state_t1])
 
-                print(time.time() - start)
-                print('')
 
             if screen is not None:
                 resting_state = np.array(board.board_array, copy=True, ndmin=3)
@@ -202,7 +198,7 @@ class Tetris:
                 screen.refresh()
                 time.sleep(TIME_BETWEEN_ROUNDS)
             else:
-                print('Game over: {}'.format(reward))
+                print('Game over: {} ({} seconds)'.format(reward, time.time() - start))
 
     def generate_tetronimo(self, board):
         return Tetromino(board, random.choice([T, L, J, O, I, S, Z]))

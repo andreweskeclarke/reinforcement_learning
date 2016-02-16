@@ -53,7 +53,7 @@ class Agent(threading.Thread):
 
     def save(self):
         self.save_requests += 1
-        if self.save_requests == 10:
+        if self.save_requests == 700:
             print('Saving a model...')
             self.save_requests = 0
             name = time.strftime("%m-%dT%H%M%S%Z")
@@ -70,14 +70,10 @@ class Agent(threading.Thread):
     def train(self, samples):
         start = time.time()
         future_rewards = np.amax(self.model.predict(np.stack([s[STATE1_INDEX] for s in samples], axis=0), verbose=0), axis=1)
-        print('-- {}'.format(time.time() - start))
         y = self.model.predict(np.stack([s[STATE0_INDEX] for s in samples], axis=0), verbose=0)
-        print('-- {}'.format(time.time() - start))
         for i, a in enumerate(map(lambda s:s[ACTION_INDEX], samples)):
             y[i][a] = samples[i][REWARD_INDEX] + future_rewards[i]
-        print('-- {}'.format(time.time() - start))
         self.model.train_on_batch(np.stack([s[STATE0_INDEX] for s in samples]), y)
-        print('-- {}'.format(time.time() - start))
 
     def init_model(self):
         self.model = Sequential()
