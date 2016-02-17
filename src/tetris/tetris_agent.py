@@ -2,7 +2,7 @@ from keras.models import Sequential, model_from_json
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import *
 from keras.optimizers import SGD
-from tetris_game import POSSIBLE_MOVES, TIME_PER_TICK
+from tetris_game import POSSIBLE_MOVES, TIME_PER_TICK, MOVES_POOL
 from collections import deque
 import os
 import glob
@@ -21,31 +21,39 @@ ACTION_INDEX = 1
 REWARD_INDEX = 2
 STATE1_INDEX = 3
 
+BUFFER_SIZE = 10000000
+
 class Agent():
     def __init__(self):
         self.init_model()
-        self.replay_memory = list()
         self.save_requests = 0
+        # Treat as a ring buffer
+        self.max_pos = 0
+        self.current_pos = 0
+        self.states_t0 = np.zeros((BUFFER_SIZE,1,22,10))
+        self.actions = np.zeros([BUFFER_SIZE])
+        self.states_t1 = np.zeros((BUFFER_SIZE,1,22,10))
+        self.rewards = np.zeros([BUFFER_SIZE])
 
     def choose_action(self, state):
         if bool(random.getrandbits(1)):
-            return POSSIBLE_MOVES[np.argmax(self.model.predict(np.array(state, ndmin=4), batch_size=1, verbose=0))]
-        return random.choice(POSSIBLE_MOVES)
+            return np.argmax(self.model.predict(np.array(state, ndmin=4), batch_size=1, verbose=0))
+        return random.choice(MOVES_POOL)
         
-    def handle_new_state(self, state):
-        self.replay_memory.append(state)
-
-    def handle(self, state):
-        start = time.time() 
-        self.handle_new_state(state)
+    def handle(self, state0, action, reward, state1):
+        self.states_t0[self.current_pos] = state0
+        self.actions[self.current_pos] = action
+        self.rewards[self.current_pos] = reward
+        self.states_t1[self.current_pos] = state1
+        self.current_pos = (self.current_pos + 1) % BUFFER_SIZE
+        self.max_pos = min(self.max_pos + 1, BUFFER_SIZE)
         self.experience_replay()
-        if state[REWARD_INDEX] == -10000:
+        if reward == -10000:
            self.save()
 
     def save(self):
         self.save_requests += 1
-        if self.save_requests == 700:
-            print('Saving a model...')
+        if self.save_requests == 500:
             self.save_requests = 0
             name = time.strftime("%m-%dT%H%M%S%Z")
             model_file = 'output/model_{}.json'.format(name)
@@ -55,16 +63,13 @@ class Agent():
             print('Saved: {} and {}'.format(model_file, weights_file))
 
     def experience_replay(self):
-        if len(self.replay_memory) > N_REPLAYS_PER_ROUND:
-            self.train(random.sample(self.replay_memory, N_REPLAYS_PER_ROUND))
-
-    def train(self, samples):
         start = time.time()
-        future_rewards = np.amax(self.model.predict(np.stack([s[STATE1_INDEX] for s in samples], axis=0), verbose=0), axis=1)
-        y = self.model.predict(np.stack([s[STATE0_INDEX] for s in samples], axis=0), verbose=0)
-        for i, a in enumerate(map(lambda s:s[ACTION_INDEX], samples)):
-            y[i][a] = samples[i][REWARD_INDEX] + future_rewards[i]
-        self.model.train_on_batch(np.stack([s[STATE0_INDEX] for s in samples]), y)
+        indexes = np.random.randint(0, self.max_pos, N_REPLAYS_PER_ROUND)
+        y = self.model.predict(self.states_t0[indexes], verbose=0)
+        future_rewards = np.amax(self.model.predict(self.states_t1[indexes], verbose=0), axis=1)
+        for i, a in enumerate(self.actions[indexes]):
+            y[i][a] = self.rewards[indexes][i] + future_rewards[i]
+        self.model.train_on_batch(self.states_t0[indexes], y)
 
     def init_model(self):
         self.model = Sequential()
@@ -104,15 +109,6 @@ class GreedyAgent(Agent):
 
     def choose_action(self, state):
         return np.argmax(self.model.predict([state], batch_size=1, verbose=0))
-        
-    def handle_new_state(self, state):
-        pass
 
-    def experience_replay(self):
-        pass
-
-    def train(self, sample):
-        pass
-
-    def save(self):
+    def handle(self, s0, a, r, s1):
         pass

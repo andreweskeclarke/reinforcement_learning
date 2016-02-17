@@ -26,18 +26,26 @@ MOVES_MAP = [ lambda x:x.rotate_left(),
               lambda x:x.move_down(),
               lambda x:None ]
 
-POSSIBLE_MOVES = np.array([ MOVE_LEFT,
-                            ROTATE_LEFT,
-                            ROTATE_RIGHT,
-                            MOVE_RIGHT,
-                            MOVE_LEFT,
-                            MOVE_LEFT,
-                            MOVE_LEFT,
-                            MOVE_LEFT,
-                            MOVE_RIGHT,
-                            MOVE_LEFT,
-                            MOVE_DOWN,
-                            DO_NOTHING ], np.int8)
+POSSIBLE_MOVES = np.array([
+    ROTATE_LEFT,
+    ROTATE_RIGHT,
+    MOVE_RIGHT,
+    MOVE_LEFT,
+    MOVE_DOWN,
+    DO_NOTHING ])
+
+MOVES_POOL = np.array([ MOVE_LEFT,
+                        ROTATE_LEFT,
+                        ROTATE_RIGHT,
+                        MOVE_RIGHT,
+                        MOVE_LEFT,
+                        MOVE_LEFT,
+                        MOVE_LEFT,
+                        MOVE_LEFT,
+                        MOVE_RIGHT,
+                        MOVE_LEFT,
+                        MOVE_DOWN,
+                        DO_NOTHING ], np.int8)
 
 class Tetromino:
     def __init__(self, board, offsets):
@@ -160,7 +168,7 @@ class Tetris:
             ticks = 0
             actions_since_last_tick = 0
             state_t0 = np.array(board.board_array, copy=True, ndmin=3)
-            self.agent.handle([state_t0, DO_NOTHING, 0, state_t0])
+            self.agent.handle(state_t0, DO_NOTHING, 0, state_t0)
             game_start = time.time()
             while play_on:
                 turn_start = time.time()
@@ -189,11 +197,11 @@ class Tetris:
                 if play_on:
                     state_t1 = np.array(board.board_array, copy=True, ndmin=3)
                     merge_board_and_piece(state_t1, tetronimo)
-                    self.agent.handle([state_t0, action, reward - old_reward, state_t1])
+                    self.agent.handle(state_t0, action, reward - old_reward, state_t1)
                 else:
                     state_t1 = np.array(board.board_array, copy=True, ndmin=3)
                     merge_board_and_piece(state_t1, tetronimo)
-                    self.agent.handle([state_t0, action, -10000, state_t1])
+                    self.agent.handle(state_t0, action, -10000, state_t1)
 
             if screen is not None:
                 resting_state = np.array(board.board_array, copy=True, ndmin=3)
