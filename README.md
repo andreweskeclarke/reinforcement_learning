@@ -9,6 +9,13 @@ conda env create
 source activate reinf
 ```
 
+# Tetris - Deep Reinforcement Learning
+Use a deep reinforcement learning algorithm to learn a tetris playing agent.
+
+Takes advantage of a Kears/Theano/Cuda stack to learn a neural net Q-function.
+
+(In Progress)
+
 # Monte Carlo Blackjack (Chapter 5)
 Uses e-greedy methods to find an optimal action value function and policy.
 
