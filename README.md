@@ -16,6 +16,10 @@ Takes advantage of a Kears/Theano/Cuda stack to learn a neural net Q-function.
 
 (In Progress)
 
+```bash
+python src/tetris/simulation.py
+```
+
 # Monte Carlo Blackjack (Chapter 5)
 Uses e-greedy methods to find an optimal action value function and policy.
 
