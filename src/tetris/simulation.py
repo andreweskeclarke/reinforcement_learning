@@ -10,17 +10,12 @@ def main():
     parser.add_argument('--watch', action='store_true', help='Run the newest models')
     args = parser.parse_args()
 
-    actions_q = queue.Queue()
-    states_q = queue.Queue()
-    print_q = queue.Queue()
     if args.watch:
-        a = GreedyAgent(actions_q, states_q, print_q)
-        a.start()
-        Tetris(actions_q, states_q, print_q).play_visually()
+        a = GreedyAgent()
+        Tetris(a).play_visually()
     else:
-        a = Agent(actions_q, states_q, print_q)
-        a.start()
-        Tetris(actions_q, states_q, print_q).play()
+        a = Agent()
+        Tetris(a).play()
 
 if __name__ == "__main__":
     main()

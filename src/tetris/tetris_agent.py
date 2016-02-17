@@ -13,7 +13,7 @@ import time
 import random
 import math
 
-N_REPLAYS_PER_ROUND = 5
+N_REPLAYS_PER_ROUND = 20
 
 # SARS - [State_0, Action, Reward, State_1]
 STATE0_INDEX = 0
@@ -21,35 +21,29 @@ ACTION_INDEX = 1
 REWARD_INDEX = 2
 STATE1_INDEX = 3
 
-class Agent(threading.Thread):
-    def __init__(self, actions_q, states_q, print_q):
-        threading.Thread.__init__(self)
-        self.actions_q = actions_q
-        self.states_q = states_q
-        self.print_q = print_q
-        self.daemon = True
+class Agent():
+    def __init__(self):
         self.init_model()
         self.replay_memory = list()
         self.save_requests = 0
 
     def choose_action(self, state):
         if bool(random.getrandbits(1)):
-            return np.argmax(self.model.predict(np.array(state, ndmin=4), batch_size=1, verbose=0))
+            return POSSIBLE_MOVES[np.argmax(self.model.predict(np.array(state, ndmin=4), batch_size=1, verbose=0))]
         return random.choice(POSSIBLE_MOVES)
         
     def handle_new_state(self, state):
         self.replay_memory.append(state)
 
-    def run(self):
-        while True:
-            start = time.time()
-            state = self.states_q.get()
-            self.handle_new_state(state)
-            self.experience_replay()
-            if state[REWARD_INDEX] == -10000:
-               self.save()
-            else:
-                self.actions_q.put(self.choose_action(state[STATE1_INDEX]))
+    def handle(self, state):
+        start = time.time() 
+        self.handle_new_state(state)
+        print('---- handle {}'.format(time.time() - start))
+        self.experience_replay()
+        print('---- handle {}'.format(time.time() - start))
+        if state[REWARD_INDEX] == -10000:
+           self.save()
+        print('---- handle {}'.format(time.time() - start))
 
     def save(self):
         self.save_requests += 1
@@ -102,12 +96,8 @@ class Agent(threading.Thread):
         self.model.compile(loss='categorical_crossentropy', optimizer=sgd)
 
 class GreedyAgent(Agent):
-    def __init__(self, actions_q, states_q, print_q):
+    def __init__(self):
         threading.Thread.__init__(self)
-        self.actions_q = actions_q
-        self.states_q = states_q
-        self.print_q = print_q
-        self.daemon = True
         self.init_model()
         self.replay_memory = []
 
