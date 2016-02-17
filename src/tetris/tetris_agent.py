@@ -38,12 +38,9 @@ class Agent():
     def handle(self, state):
         start = time.time() 
         self.handle_new_state(state)
-        print('---- handle {}'.format(time.time() - start))
         self.experience_replay()
-        print('---- handle {}'.format(time.time() - start))
         if state[REWARD_INDEX] == -10000:
            self.save()
-        print('---- handle {}'.format(time.time() - start))
 
     def save(self):
         self.save_requests += 1

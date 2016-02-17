@@ -164,7 +164,6 @@ class Tetris:
             game_start = time.time()
             while play_on:
                 turn_start = time.time()
-                print('')
                 action = DO_NOTHING
                 old_reward = reward
 
@@ -173,10 +172,8 @@ class Tetris:
                 if screen is not None:
                     tetris_print(state_t0, reward, screen)
                 try:
-                    print(time.time() - turn_start)
                     MOVES_MAP[self.agent.choose_action(state_t0)](tetronimo)
                     actions_since_last_tick += 1
-                    print(time.time() - turn_start)
                 except queue.Empty:
                     pass # If no actions placed, ignore
                 # Tick once per 4 actions
@@ -192,16 +189,11 @@ class Tetris:
                 if play_on:
                     state_t1 = np.array(board.board_array, copy=True, ndmin=3)
                     merge_board_and_piece(state_t1, tetronimo)
-                    print(time.time() - turn_start)
                     self.agent.handle([state_t0, action, reward - old_reward, state_t1])
                 else:
                     state_t1 = np.array(board.board_array, copy=True, ndmin=3)
                     merge_board_and_piece(state_t1, tetronimo)
-                    print(time.time() - turn_start)
                     self.agent.handle([state_t0, action, -10000, state_t1])
-
-
-                print(time.time() - turn_start)
 
             if screen is not None:
                 resting_state = np.array(board.board_array, copy=True, ndmin=3)
