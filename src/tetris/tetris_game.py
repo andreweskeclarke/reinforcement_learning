@@ -34,14 +34,8 @@ POSSIBLE_MOVES = np.array([
     MOVE_DOWN,
     DO_NOTHING ])
 
-MOVES_POOL = np.array([ MOVE_LEFT,
-                        ROTATE_LEFT,
+MOVES_POOL = np.array([ ROTATE_LEFT,
                         ROTATE_RIGHT,
-                        MOVE_RIGHT,
-                        MOVE_LEFT,
-                        MOVE_LEFT,
-                        MOVE_LEFT,
-                        MOVE_LEFT,
                         MOVE_RIGHT,
                         MOVE_LEFT,
                         MOVE_DOWN,
@@ -240,11 +234,11 @@ def tetris_print(array, reward, screen):
     curses.noecho()
     curses.curs_set(0)
     screen.erase()
-    for y, row in reversed(list(enumerate(array))):
+    for y, row in reversed(list(enumerate(array[0]))):
         for x, value in enumerate(row):
             character = "\u2588" if value else "."
             color = curses.color_pair(value)
-            screen.addch(len(array) - y, 3*x, character, color)
-            screen.addch(len(array) - y, 3*x + 1, character, color)
-    screen.addstr(len(array) + 5, 0, 'Reward: {}'.format(reward))
+            screen.addch(len(array[0]) - y, 3*x, character, color)
+            screen.addch(len(array[0]) - y, 3*x + 1, character, color)
+    screen.addstr(len(array[0]) + 5, 0, 'Reward: {}'.format(reward))
     screen.refresh()

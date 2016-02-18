@@ -30,9 +30,9 @@ class Agent():
         # Treat as a ring buffer
         self.max_pos = 0
         self.current_pos = 0
-        self.states_t0 = np.zeros((BUFFER_SIZE,1,22,10))
+        self.states_t0 = np.zeros((BUFFER_SIZE,1,22,10), dtype=np.int8)
         self.actions = np.zeros([BUFFER_SIZE])
-        self.states_t1 = np.zeros((BUFFER_SIZE,1,22,10))
+        self.states_t1 = np.zeros((BUFFER_SIZE,1,22,10), dtype=np.int8)
         self.rewards = np.zeros([BUFFER_SIZE])
 
     def choose_action(self, state):
@@ -98,17 +98,26 @@ class Agent():
         self.model.compile(loss='categorical_crossentropy', optimizer=sgd)
 
 class GreedyAgent(Agent):
-    def __init__(self):
+    def __init__(self, model_path=None, weights_path=None):
         threading.Thread.__init__(self)
+        self.model_path = model_path
+        self.weights_path = weights_path
         self.init_model()
         self.replay_memory = []
 
     def init_model(self):
-        self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
-        self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
+        if self.model_path:
+            self.model = model_from_json(open(self.model_path).read())
+        else:
+            self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
+        if self.weights_path:
+            self.model.load_weights(self.weights_path)
+        else:
+            self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
 
     def choose_action(self, state):
-        return np.argmax(self.model.predict([state], batch_size=1, verbose=0))
+        time.sleep(0.05)
+        return np.argmax(self.model.predict(np.array(state, ndmin=4), batch_size=1, verbose=0))
 
     def handle(self, s0, a, r, s1):
         pass
