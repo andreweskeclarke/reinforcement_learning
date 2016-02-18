@@ -13,7 +13,7 @@ import time
 import random
 import math
 
-N_REPLAYS_PER_ROUND = 20
+N_REPLAYS_PER_ROUND = 5
 
 # SARS - [State_0, Action, Reward, State_1]
 STATE0_INDEX = 0
@@ -53,7 +53,7 @@ class Agent():
 
     def save(self):
         self.save_requests += 1
-        if self.save_requests == 500:
+        if self.save_requests == 25:
             self.save_requests = 0
             name = time.strftime("%m-%dT%H%M%S%Z")
             model_file = 'output/model_{}.json'.format(name)

@@ -6,6 +6,7 @@ import sys
 import random
 import threading
 import numpy as np
+from collections import deque
 from termcolor import colored, cprint
 from offsets import *
 
@@ -99,6 +100,7 @@ class Board:
         self.starting_y = height - 2
         self.board_array = np.array([[0 for x in range(0, self.width)] for y in range(0, self.height)], np.int8)
         self.current_tetronimo = None
+        self.current_height = 0
 
     def __clear_line__(self, y):
         self.board_array = np.concatenate((
@@ -109,6 +111,7 @@ class Board:
     def __freeze_tetronimo__(self):
         n_cleared_rows = 0
         for x, y, v in self.current_tetronimo.occupied_squares():
+            self.current_height = max(self.current_height, y)
             if not self.is_out(x, y):
                 self.board_array[y][x] = v
             if all(self.board_array[y]): 
@@ -152,6 +155,7 @@ class Tetris:
     def play(self, screen=None):
         if screen is not None:
             self.init_colors()
+        running_scores = deque([], 50)
         while True:
             board = Board()
             reward = 0
@@ -164,6 +168,8 @@ class Tetris:
             state_t0 = np.array(board.board_array, copy=True, ndmin=3)
             self.agent.handle(state_t0, DO_NOTHING, 0, state_t0)
             game_start = time.time()
+            current_height = 0
+            n_pieces = 1
             while play_on:
                 turn_start = time.time()
                 action = DO_NOTHING
@@ -179,12 +185,17 @@ class Tetris:
                 except queue.Empty:
                     pass # If no actions placed, ignore
                 # Tick once per 4 actions
-                if actions_since_last_tick > 2:
+                if actions_since_last_tick > 0:
                     new_reward, lines_cleared = board.tick()
                     reward += new_reward
                     n_cleared += lines_cleared
                     if board.should_add_tetronimo():
-                        reward += 10
+                        n_pieces += 1
+                        if board.current_height > current_height:
+                            reward = reward - 50*(board.current_height - current_height)
+                            current_height = board.current_height
+                        else:
+                            reward += 50
                         tetronimo = self.generate_tetronimo(board)
                         play_on = board.add_tetronimo(tetronimo)
 
@@ -197,6 +208,7 @@ class Tetris:
                     merge_board_and_piece(state_t1, tetronimo)
                     self.agent.handle(state_t0, action, -10000, state_t1)
 
+            running_scores.append(reward)
             if screen is not None:
                 resting_state = np.array(board.board_array, copy=True, ndmin=3)
                 merge_board_and_piece(resting_state, tetronimo)
@@ -205,7 +217,7 @@ class Tetris:
                 screen.refresh()
                 time.sleep(TIME_BETWEEN_ROUNDS)
             else:
-                print('Game over: {} pts, {} lines cleared ({} seconds)'.format(reward, n_cleared, time.time() - game_start))
+                print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds)'.format(sum(running_scores)/len(running_scores), reward, n_cleared, n_pieces, time.time() - game_start))
 
     def generate_tetronimo(self, board):
         return Tetromino(board, random.choice([T, L, J, O, I, S, Z]))
