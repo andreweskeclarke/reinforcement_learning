@@ -217,7 +217,8 @@ class Tetris:
                 screen.refresh()
                 time.sleep(TIME_BETWEEN_ROUNDS)
             else:
-                print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds)'.format(sum(running_scores)/len(running_scores), reward, n_cleared, n_pieces, time.time() - game_start))
+                avg = int(sum(running_scores)/len(running_scores))
+                print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds)'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start))
 
     def generate_tetronimo(self, board):
         return Tetromino(board, random.choice([T, L, J, O, I, S, Z]))
