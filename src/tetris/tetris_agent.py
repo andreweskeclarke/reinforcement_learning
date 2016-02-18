@@ -30,13 +30,18 @@ class Agent():
         # Treat as a ring buffer
         self.max_pos = 0
         self.current_pos = 0
+        self.n_plays = 0
         self.states_t0 = np.zeros((BUFFER_SIZE,1,22,10), dtype=np.int8)
         self.actions = np.zeros([BUFFER_SIZE])
         self.states_t1 = np.zeros((BUFFER_SIZE,1,22,10), dtype=np.int8)
         self.rewards = np.zeros([BUFFER_SIZE])
 
+    def exploit(self):
+        # Simple linear exploit, max at 90% exploitations
+        return random.random() < 0.80
+
     def choose_action(self, state):
-        if bool(random.getrandbits(1)):
+        if self.exploit():
             return np.argmax(self.model.predict(np.array(state, ndmin=4), batch_size=1, verbose=0))
         return random.choice(MOVES_POOL)
         
@@ -46,6 +51,7 @@ class Agent():
         self.rewards[self.current_pos] = reward
         self.states_t1[self.current_pos] = state1
         self.current_pos = (self.current_pos + 1) % BUFFER_SIZE
+        self.n_plays += 1
         self.max_pos = min(self.max_pos + 1, BUFFER_SIZE)
         self.experience_replay()
         if reward == -10000:

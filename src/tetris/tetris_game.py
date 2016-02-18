@@ -155,7 +155,7 @@ class Tetris:
     def play(self, screen=None):
         if screen is not None:
             self.init_colors()
-        running_scores = deque([], 50)
+        running_scores = deque([], 100)
         while True:
             board = Board()
             reward = 0
@@ -192,7 +192,7 @@ class Tetris:
                     if board.should_add_tetronimo():
                         n_pieces += 1
                         if board.current_height > current_height:
-                            reward = reward - 50*(board.current_height - current_height)
+                            reward = reward - 10*(board.current_height - current_height)
                             current_height = board.current_height
                         else:
                             reward += 50
