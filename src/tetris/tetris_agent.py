@@ -42,10 +42,13 @@ class Agent():
 
     def choose_action(self, state):
         if self.exploit():
-            print(np.array(state, ndmin=4))
             vals = self.model.predict(np.array(state, ndmin=4), verbose=0)
-            print(vals)
-            return np.argmax( vals)
+            if random.random() < 0.001:
+                print('Some predicted values for a board:')
+                print(np.array(state, ndmin=4))
+                print('[ROTATE_LEFT, ROTATE_RIGHT, MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN, DO_NOTHING]')
+                print(vals)
+            return np.argmax(vals)
         return random.choice(MOVES_POOL)
         
     def handle(self, state0, action, reward, state1):
