@@ -153,6 +153,7 @@ class Tetris:
         curses.wrapper(self.play)
    
     def play(self, screen=None):
+        print('Begin playing!')
         if screen is not None:
             self.init_colors()
         running_scores = deque([], 100)
