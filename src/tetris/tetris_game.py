@@ -206,7 +206,7 @@ class Tetris:
                 else:
                     state_t1 = np.array(board.board_array, copy=True, ndmin=3)
                     merge_board_and_piece(state_t1, tetronimo)
-                    self.agent.handle(state_t0, action, -10000, state_t1)
+                    self.agent.handle(state_t0, action, -200, state_t1)
 
             running_scores.append(reward)
             if screen is not None:

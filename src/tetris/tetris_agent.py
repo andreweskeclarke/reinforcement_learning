@@ -66,12 +66,11 @@ class Agent():
                 self.rewards[index] += reward * (1/(2+index))
             self.train_on_indexes(indexes)
         self.experience_replay()
-        if reward == -10000:
-           self.save()
+       self.save()
 
     def save(self):
         self.save_requests += 1
-        if self.save_requests == 100:
+        if self.save_requests == 10000:
             self.save_requests = 0
             name = time.strftime("%m-%dT%H%M%S%Z")
             model_file = 'output/model_{}.json'.format(name)
