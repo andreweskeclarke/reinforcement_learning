@@ -43,7 +43,7 @@ class Agent():
     def choose_action(self, state):
         if self.exploit():
             vals = self.model.predict(np.array(state, ndmin=4), verbose=0)
-            if random.random() < 0.001:
+            if random.random() < 0.0001:
                 print('Some predicted values for a board:')
                 print(np.array(state, ndmin=4))
                 print('[ROTATE_LEFT, ROTATE_RIGHT, MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN, DO_NOTHING]')
@@ -66,11 +66,11 @@ class Agent():
                 self.rewards[index] += reward * (1/(2+index))
             self.train_on_indexes(indexes)
         self.experience_replay()
-       self.save()
+        self.save()
 
     def save(self):
         self.save_requests += 1
-        if self.save_requests == 10000:
+        if self.save_requests == 50000:
             self.save_requests = 0
             name = time.strftime("%m-%dT%H%M%S%Z")
             model_file = 'output/model_{}.json'.format(name)
@@ -91,24 +91,24 @@ class Agent():
         self.model.train_on_batch(self.states_t0[indexes], y)
 
     def init_model(self):
-    #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
-    #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
-        self.model = Sequential()
-        # 32 Convolution filters of size 2x2 each
-        self.model.add(Convolution2D(32, 2, 2, 
-                                     input_shape=(1,22,10), 
-                                     activation='relu'))
-        # Second convolution layer
-        self.model.add(Convolution2D(64, 4, 4, 
-                                     input_shape=(32,21,9), 
-                                     activation='relu'))
-        # Flatten to a single vector of inputs
-        self.model.add(Flatten())
-        # Dense hidden layer
-        self.model.add(Dense(64, activation='relu', init='uniform'))
-        self.model.add(Dense(64, activation='relu', init='uniform'))
-        self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='uniform'))
-        self.model.compile(loss='mse', optimizer='rmsprop')
+        self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
+        self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
+    #     self.model = Sequential()
+    #     # 32 Convolution filters of size 2x2 each
+    #     self.model.add(Convolution2D(32, 2, 2, 
+    #                                  input_shape=(1,22,10), 
+    #                                  activation='relu'))
+    #     # Second convolution layer
+    #     self.model.add(Convolution2D(64, 4, 4, 
+    #                                  input_shape=(32,21,9), 
+    #                                  activation='relu'))
+    #     # Flatten to a single vector of inputs
+    #     self.model.add(Flatten())
+    #     # Dense hidden layer
+    #     self.model.add(Dense(64, activation='relu', init='uniform'))
+    #     self.model.add(Dense(64, activation='relu', init='uniform'))
+    #     self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='uniform'))
+    #     self.model.compile(loss='mse', optimizer='rmsprop')
 
 class GreedyAgent(Agent):
     def __init__(self, model_path=None, weights_path=None):

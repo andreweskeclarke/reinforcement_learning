@@ -206,7 +206,7 @@ class Tetris:
                 else:
                     state_t1 = np.array(board.board_array, copy=True, ndmin=3)
                     merge_board_and_piece(state_t1, tetronimo)
-                    self.agent.handle(state_t0, action, -200, state_t1)
+                    self.agent.handle(state_t0, action, -500, state_t1)
 
             running_scores.append(reward)
             if screen is not None:
@@ -217,8 +217,10 @@ class Tetris:
                 screen.refresh()
                 time.sleep(TIME_BETWEEN_ROUNDS)
             else:
-                avg = int(sum(running_scores)/len(running_scores))
-                print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds)'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start))
+                if bool(random.getrandbits(1)):
+                    if bool(random.getrandbits(1)):
+                        avg = int(sum(running_scores)/len(running_scores))
+                        print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds)'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start))
 
     def generate_tetronimo(self, board):
         return Tetromino(board, random.choice([T, L, J, O, I, S, Z]))
