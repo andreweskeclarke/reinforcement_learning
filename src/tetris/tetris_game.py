@@ -156,7 +156,7 @@ class Tetris:
         print('Begin playing!')
         if screen is not None:
             self.init_colors()
-        running_scores = deque([], 100)
+        running_scores = deque([], 250)
         while True:
             board = Board()
             reward = 0

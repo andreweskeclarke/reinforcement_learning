@@ -2,7 +2,7 @@ from keras.models import Sequential, model_from_json
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import *
 from keras.optimizers import SGD
-from tetris_game import POSSIBLE_MOVES, TIME_PER_TICK, MOVES_POOL
+from tetris_game import *
 from collections import deque
 import os
 import glob
@@ -39,9 +39,9 @@ class Agent():
     def exploit(self):
         # Simple linear exploit, max at 90% exploitations
         if self.n_plays > 50000:
-            return random.random() < 0.40 + (0.40 * ((self.n_plays - 50000)/(float(200000))))
+            return random.random() < 0.50 + (0.40 * ((self.n_plays - 50000)/(float(200000))))
         if self.n_plays > 250000:
-            return random.random() < 0.80
+            return random.random() < 0.90
         return random.random() < 0.40
 
     def choose_action(self, state):
