@@ -38,7 +38,9 @@ class Agent():
 
     def exploit(self):
         # Simple linear exploit, max at 90% exploitations
-        return random.random() < 0.80
+        if n_plays > 250000:
+            return random.random() < 0.80
+        return random.random() < 0.40
 
     def choose_action(self, state):
         state = (state > 0).astype(np.int8)
