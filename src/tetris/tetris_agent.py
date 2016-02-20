@@ -53,8 +53,12 @@ class Agent():
                 print(np.array(state, ndmin=4))
                 print('[ROTATE_LEFT, ROTATE_RIGHT, MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN, DO_NOTHING]')
                 print(vals)
-            return np.argmax(vals)
-        return random.choice(MOVES_POOL)
+            choice = np.argmax(vals)
+        else:
+            choice = random.choice(MOVES_POOL)
+        if random.random() < 0.01:
+            print(choice)
+        return choice
         
     def handle(self, state0, action, reward, state1):
         state0 = (state0 > 0).astype(np.int8)
