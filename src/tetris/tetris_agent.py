@@ -38,7 +38,9 @@ class Agent():
 
     def exploit(self):
         # Simple linear exploit, max at 90% exploitations
-        if n_plays > 250000:
+        if self.n_plays > 50000:
+            return random.random() < 0.40 + (0.40 * ((self.n_plays - 50000)/(float(200000))))
+        if self.n_plays > 250000:
             return random.random() < 0.80
         return random.random() < 0.40
 
