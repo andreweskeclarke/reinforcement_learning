@@ -70,7 +70,7 @@ class Agent():
         self.current_pos = (self.current_pos + 1) % BUFFER_SIZE
         self.n_plays += 1
         self.max_pos = min(self.max_pos + 1, BUFFER_SIZE)
-        if reward > 0 and self.n_plays > 4:
+        if reward != 0 and self.n_plays > 4:
             # Prioritized Sweeping
             indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 3, -1)]
             for i, index in enumerate(indexes):
