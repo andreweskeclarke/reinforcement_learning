@@ -41,7 +41,7 @@ class Agent():
         return random.random() < 0.80
 
     def choose_action(self, state):
-        state = (state > 0).astype(int8)
+        state = (state > 0).astype(np.int8)
         if self.exploit():
             vals = self.model.predict(np.array(state, ndmin=4), verbose=0)
             if random.random() < 0.0001:
