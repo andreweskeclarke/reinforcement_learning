@@ -53,8 +53,8 @@ class Agent():
         return random.choice(MOVES_POOL)
         
     def handle(self, state0, action, reward, state1):
-        state0 = (state0 > 0).astype(int8)
-        state1 = (state1 > 0).astype(int8)
+        state0 = (state0 > 0).astype(np.int8)
+        state1 = (state1 > 0).astype(np.int8)
         self.states_t0[self.current_pos] = state0
         self.actions[self.current_pos] = action
         self.rewards[self.current_pos] = reward
