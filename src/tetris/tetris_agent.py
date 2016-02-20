@@ -41,6 +41,7 @@ class Agent():
         return random.random() < 0.80
 
     def choose_action(self, state):
+        state = (state > 0).astype(int8)
         if self.exploit():
             vals = self.model.predict(np.array(state, ndmin=4), verbose=0)
             if random.random() < 0.0001:
@@ -52,6 +53,8 @@ class Agent():
         return random.choice(MOVES_POOL)
         
     def handle(self, state0, action, reward, state1):
+        state0 = (state0 > 0).astype(int8)
+        state1 = (state1 > 0).astype(int8)
         self.states_t0[self.current_pos] = state0
         self.actions[self.current_pos] = action
         self.rewards[self.current_pos] = reward
