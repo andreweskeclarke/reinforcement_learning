@@ -56,8 +56,6 @@ class Agent():
             choice = np.argmax(vals)
         else:
             choice = random.choice(MOVES_POOL)
-        if random.random() < 0.01:
-            print(choice)
         return choice
         
     def handle(self, state0, action, reward, state1):
