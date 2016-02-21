@@ -1,0 +1,49 @@
+Feb 21, 2016
+
+Was using the following:
+
+Conv 32x2x2
+Conv 64x4x4
+Dense 64 relu
+Dense 64 relu
+Dense 6  linear (output)
+
+First of all, there are only 16 possible 2x2 filters so that was wasteful
+Second, I'm goig to simplify things and add pooling. I'm worried about pooling since the final product needs to have a high resolution view of the pieces, being off by 1 will not work. 
+
+But, I want to see some convergence, and build from there.
+
+New model:
+Conv 16x2x2
+MaxPool 3x2
+Dense 64 relu
+Dense 64 relu
+Dense 6 linear (ouput)
+
+Feb 20, 2016
+
+Still no success. Today I ran some baseline measurements. None of the trained apps have come close to a "randomly choose [LEFT, RIGHT]" strategy (~140 pts per game). Currently the net is running at approximately -70 pts per game. This is better than all single action strategies ("always left", "always rotate", etc), but worse than "randomly choose from all possible moves."
+
+Current state:
+* Convolutional nerual net, no pooling, with two dense layers to the output
+* Negative reward for placing tetronimos in a way that increases the max height
+* Positive reward for placing tetronimos in a way that does not increase the max height
+* Very positive reward for clearing lines, but this happens 1 in 10000 times, if even
+* Prioritized sweeping to replay positive experiences and apply the reward back 3 steps
+* Prioritized sweeping to replay negative experiences and apply the reward back 3 steps
+* Start of with 60% exploration, after 250,000 actions (~4000 games), move to 80% eploitation.
+
+Ideas:
+* Need to investigate neural net architecture, may be the weak spot
+
+
+
+Feb 17-19, 2016
+
+Played with reward and punishments to lead the agent to water. No luck.
+
+
+
+Feb 16, 2016
+
+No success so far. I spent two nights training nets and then realized they were outputting NaN's for every action choice... 
