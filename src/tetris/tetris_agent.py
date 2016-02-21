@@ -103,11 +103,11 @@ class Agent():
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
         self.model = Sequential()
-        self.model.add(Convolution2D(16, 2, 2, 
+        self.model.add(Convolution2D(16, 4, 1, 
                             activation='relu', 
                             init='he_normal',
                             input_shape=(1,22,10)))
-        self.model.add(MaxPooling2D(pool_size=(3, 2)))
+        self.model.add(MaxPooling2D(pool_size=(2, 1)))
         self.model.add(Flatten())
         # Dense hidden layer
         self.model.add(Dense(64, activation='relu', init='he_normal'))
