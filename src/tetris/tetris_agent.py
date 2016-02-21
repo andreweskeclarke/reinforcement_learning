@@ -48,11 +48,12 @@ class Agent():
         state = (state > 0).astype(np.int8)
         if self.exploit():
             vals = self.model.predict(np.array(state, ndmin=4), verbose=0)
-            if random.random() < 0.001:
+            if random.random() < 0.0001:
                 print('Some predicted values for a board:')
                 print(np.array(state, ndmin=4))
                 print('[ROTATE_LEFT, ROTATE_RIGHT, MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN, DO_NOTHING]')
                 print(vals)
+                print(np.argmax(vals))
             choice = np.argmax(vals)
         else:
             choice = random.choice(MOVES_POOL)
