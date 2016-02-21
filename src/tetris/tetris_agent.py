@@ -48,7 +48,7 @@ class Agent():
         state = (state > 0).astype(np.int8)
         if self.exploit():
             vals = self.model.predict(np.array(state, ndmin=4), verbose=0)
-            if random.random() < 0.0001:
+            if random.random() < 0.001:
                 print('Some predicted values for a board:')
                 print(np.array(state, ndmin=4))
                 print('[ROTATE_LEFT, ROTATE_RIGHT, MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN, DO_NOTHING]')
@@ -105,21 +105,15 @@ class Agent():
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
         self.model = Sequential()
-        # 32 Convolution filters of size 2x2 each
-        self.model.add(Convolution2D(32, 2, 2, 
-                                     input_shape=(1,22,10), 
-                                     activation='relu'))
-        # Second convolution layer
-        self.model.add(Convolution2D(64, 4, 4, 
-                                     input_shape=(32,21,9), 
-                                     activation='relu'))
-        # Flatten to a single vector of inputs
+        self.model.add(Convolution2D(16, 2, 2, 
+                            activation='relu', 
+                            init='he_normal',
+                            input_shape=(1,22,10)))
+        self.model.add(MaxPooling2D(pool_size=(3, 2)))
         self.model.add(Flatten())
         # Dense hidden layer
-        self.model.add(Dense(64, activation='relu', init='uniform'))
-        self.model.add(Dropout(0.25))
-        self.model.add(Dense(64, activation='relu', init='uniform'))
-        self.model.add(Dropout(0.25))
+        self.model.add(Dense(64, activation='relu', init='he_normal'))
+        self.model.add(Dense(64, activation='relu', init='he_normal'))
         self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='uniform'))
         self.model.compile(loss='mse', optimizer='rmsprop')
 
