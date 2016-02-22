@@ -108,7 +108,6 @@ class Agent():
                             activation='relu', 
                             init='he_normal',
                             input_shape=(1,22,10)))
-        self.model.add(MaxPooling2D(pool_size=(2, 1)))
         self.model.add(Flatten())
         # Dense hidden layer
         self.model.add(Dense(64, activation='relu', init='he_normal'))
