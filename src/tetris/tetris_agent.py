@@ -21,7 +21,7 @@ ACTION_INDEX = 1
 REWARD_INDEX = 2
 STATE1_INDEX = 3
 
-BUFFER_SIZE = 20000
+BUFFER_SIZE = 100000
 
 class Agent():
     def __init__(self):
