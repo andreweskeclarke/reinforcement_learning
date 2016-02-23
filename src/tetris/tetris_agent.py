@@ -80,7 +80,7 @@ class Agent():
 
     def save(self):
         self.save_requests += 1
-        if self.save_requests == 50000:
+        if self.save_requests == 100000:
             self.save_requests = 0
             name = time.strftime("%m-%dT%H%M%S%Z")
             model_file = 'output/model_{}.json'.format(name)
