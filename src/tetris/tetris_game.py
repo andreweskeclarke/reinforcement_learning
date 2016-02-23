@@ -195,6 +195,8 @@ class Tetris:
                         if board.current_height > current_height:
                             reward = reward - 10*(board.current_height - current_height)
                             current_height = board.current_height
+                        else:
+                            reward += 50
                         tetronimo = self.generate_tetronimo(board)
                         play_on = board.add_tetronimo(tetronimo)
 
