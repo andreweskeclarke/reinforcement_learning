@@ -219,7 +219,7 @@ class Tetris:
                 time.sleep(TIME_BETWEEN_ROUNDS)
             else:
                 if bool(random.getrandbits(1)):
-                    if bool(random.getrandbits(1)):
+                    if bool(random.getrandbits(1)) and len(running_scores) > 25:
                         avg = int(sum(running_scores)/len(running_scores))
                         print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds)'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start))
 
