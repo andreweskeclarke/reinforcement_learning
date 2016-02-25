@@ -32,9 +32,9 @@ class Agent():
         self.current_pos = 0
         self.n_plays = 0
         self.states_t0 = np.zeros((BUFFER_SIZE,1,22,10), dtype=np.int8)
-        self.actions = np.zeros([BUFFER_SIZE])
+        self.actions = np.zeros([BUFFER_SIZE], dtype=np.int16)
         self.states_t1 = np.zeros((BUFFER_SIZE,1,22,10), dtype=np.int8)
-        self.rewards = np.zeros([BUFFER_SIZE])
+        self.rewards = np.zeros([BUFFER_SIZE], dtype=np.int32)
 
     def exploit(self):
         # Simple linear exploit, max at 90% exploitations
@@ -71,9 +71,9 @@ class Agent():
         self.max_pos = min(self.max_pos + 1, BUFFER_SIZE)
         if reward != 0 and self.n_plays > 4:
             # Prioritized Sweeping
-            indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 3, -1)]
+            indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 5, -1)]
             for i, index in enumerate(indexes):
-                self.rewards[index] += reward * (1/(2+index))
+                self.rewards[index] += reward * (1/(2+i)) # TODO: some rounding issues here...
             self.train_on_indexes(indexes)
         self.experience_replay()
         self.save()
@@ -110,8 +110,8 @@ class Agent():
                             input_shape=(1,22,10)))
         self.model.add(Flatten())
         # Dense hidden layer
-        self.model.add(Dense(64, activation='relu', init='he_normal'))
-        self.model.add(Dense(64, activation='relu', init='he_normal'))
+        self.model.add(Dense(64, activation='tanh', init='he_normal'))
+        self.model.add(Dense(64, activation='tanh', init='he_normal'))
         self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='uniform'))
         self.model.compile(loss='mse', optimizer='rmsprop')
 
