@@ -72,8 +72,9 @@ class Agent():
         if reward != 0 and self.n_plays > 4:
             # Prioritized Sweeping
             indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 4, -1)]
+            DISCOUNT = 0.7
             for i, index in enumerate(indexes):
-                self.rewards[index] += reward * (1/(2+i)) # TODO: some rounding issues here...
+                self.rewards[index] += reward * (DISCOUNT ** i) # TODO: some rounding issues here...
             self.train_on_indexes(indexes)
         self.experience_replay()
         self.save()
@@ -95,7 +96,8 @@ class Agent():
 
     def train_on_indexes(self, indexes):
         y = self.model.predict(self.states_t0[indexes], verbose=0)
-        future_rewards = 0.4*(np.amax(self.model.predict(self.states_t1[indexes], verbose=0), axis=1))
+        DISCOUNT = 0.7
+        future_rewards = DISCOUNT*(np.amax(self.model.predict(self.states_t1[indexes], verbose=0), axis=1))
         # print('Trained:')
         # print(y[0])
         for i, a in enumerate(self.actions[indexes]):
