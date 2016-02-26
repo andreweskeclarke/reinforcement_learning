@@ -113,8 +113,8 @@ class Agent():
                             input_shape=(1,22,10)))
         self.model.add(Flatten())
         # Dense hidden layer
-        self.model.add(Dense(64, activation='tanh', init='he_normal'))
-        self.model.add(Dense(64, activation='tanh', init='he_normal'))
+        self.model.add(Dense(64, activation='relu', init='he_normal'))
+        self.model.add(Dense(64, activation='relu', init='he_normal'))
         self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='uniform'))
         self.model.compile(loss='mse', optimizer='rmsprop')
 
