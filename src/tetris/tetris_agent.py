@@ -48,7 +48,7 @@ class Agent():
         state = (state > 0).astype(np.int8)
         if self.exploit():
             vals = self.model.predict(np.array(state, ndmin=4), verbose=0)
-            if random.random() < 0.0001:
+            if random.random() < 0.005:
                 print('Some predicted values for a board:')
                 print(np.array(state, ndmin=4))
                 print('[ROTATE_LEFT, ROTATE_RIGHT, MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN, DO_NOTHING]')
@@ -71,7 +71,7 @@ class Agent():
         self.max_pos = min(self.max_pos + 1, BUFFER_SIZE)
         if reward != 0 and self.n_plays > 4:
             # Prioritized Sweeping
-            indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 5, -1)]
+            indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 4, -1)]
             for i, index in enumerate(indexes):
                 self.rewards[index] += reward * (1/(2+i)) # TODO: some rounding issues here...
             self.train_on_indexes(indexes)
@@ -95,10 +95,13 @@ class Agent():
 
     def train_on_indexes(self, indexes):
         y = self.model.predict(self.states_t0[indexes], verbose=0)
-        future_rewards = np.amax(self.model.predict(self.states_t1[indexes], verbose=0), axis=1)
+        future_rewards = 0.4*(np.amax(self.model.predict(self.states_t1[indexes], verbose=0), axis=1))
+        # print('Trained:')
+        # print(y[0])
         for i, a in enumerate(self.actions[indexes]):
             y[i][a] = self.rewards[indexes][i] + future_rewards[i]
         self.model.train_on_batch(self.states_t0[indexes], y)
+        # print(np.mean(y - self.model.predict(self.states_t0[indexes], verbose=0)))
 
     def init_model(self):
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
