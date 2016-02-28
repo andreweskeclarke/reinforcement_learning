@@ -61,8 +61,9 @@ class Agent():
         return choice
         
     def handle(self, state0, action, reward, state1):
-        state0 = (state0 > 0).astype(np.int8)
-        state1 = (state1 > 0).astype(np.int8)
+        # Have inputs vary equally around 0, allows nodes to move in +/- direction.
+        state0 = ((state0 > 0).astype(np.int8) * 2) - 1
+        state1 = ((state1 > 0).astype(np.int8) * 2) - 1
         self.states_t0[self.current_pos] = state0
         self.actions[self.current_pos] = action
         self.rewards[self.current_pos] = reward
