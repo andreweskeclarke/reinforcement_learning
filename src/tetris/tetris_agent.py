@@ -35,6 +35,7 @@ class Agent():
         self.actions = np.zeros([BUFFER_SIZE], dtype=np.int16)
         self.states_t1 = np.zeros((BUFFER_SIZE,1,22,10), dtype=np.int8)
         self.rewards = np.zeros([BUFFER_SIZE], dtype=np.int32)
+        self.interesting_indexes = list()
 
     def exploit(self):
         # Simple linear exploit, max at 90% exploitations
@@ -67,17 +68,24 @@ class Agent():
         self.rewards[self.current_pos] = reward
         self.states_t1[self.current_pos] = state1
         self.current_pos = (self.current_pos + 1) % BUFFER_SIZE
+        if self.current_pos == 0:
+            self.flush()
         self.n_plays += 1
         self.max_pos = min(self.max_pos + 1, BUFFER_SIZE)
         if reward != 0 and self.n_plays > 4:
             # Backups
             indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 4, -1)]
             DISCOUNT = 0.7
+            if reward > 0:
+                self.interesting_indexes.append(indexes)
             for i, index in enumerate(indexes):
                 self.rewards[index] += reward * (DISCOUNT ** i) # TODO: some rounding issues here...
             self.train_on_indexes(indexes)
         self.experience_replay()
         self.save()
+
+    def flush(self):
+        self.interesting_indexes = list()
 
     def save(self):
         self.save_requests += 1
@@ -93,6 +101,8 @@ class Agent():
     def experience_replay(self):
         indexes = np.random.randint(0, self.max_pos, N_REPLAYS_PER_ROUND)
         self.train_on_indexes(indexes)
+        if len(self.interesting_indexes) > 0:
+            self.train_on_indexes(random.choice(self.interesting_indexes))
 
     def train_on_indexes(self, indexes):
         y = self.model.predict(self.states_t0[indexes], verbose=0)
@@ -117,7 +127,7 @@ class Agent():
         # Dense hidden layer
         self.model.add(Dense(64, activation='relu', init='he_normal'))
         self.model.add(Dense(64, activation='relu', init='he_normal'))
-        self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='uniform'))
+        self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_normal'))
         self.model.compile(loss='mse', optimizer='rmsprop')
 
 class GreedyAgent(Agent):
