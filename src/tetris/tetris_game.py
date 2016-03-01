@@ -186,6 +186,7 @@ class Tetris:
                     action = self.agent.choose_action(state_t0)
                     MOVES_MAP[action](tetronimo)
                     state_t1 = np.array(board.board_array, copy=True, ndmin=3)
+                    merge_board_and_piece(state_t1, tetronimo)
                     self.agent.handle(state_t0, action, reward - old_reward, state_t1)
                     if action == DO_NOTHING:
                         break
