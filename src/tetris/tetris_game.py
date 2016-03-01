@@ -142,6 +142,7 @@ class Board:
         old_height = self.current_height
         points = 0
         n_cleared_rows = 0
+        next_state = np.array(self.board_array, copy=True, ndmin=3)
         if self.current_tetronimo is not None:
             self.current_tetronimo.move_down()
             next_state = np.array(self.board_array, copy=True, ndmin=3)
@@ -179,14 +180,20 @@ class Tetris:
             current_height = 0
             while play_on:
                 old_reward = reward
-                # Two moves per tick
                 for i in range(0,4):
                     state_t0 = np.array(board.board_array, copy=True, ndmin=3)
                     merge_board_and_piece(state_t0, tetronimo)
                     action = self.agent.choose_action(state_t0)
                     MOVES_MAP[action](tetronimo)
+                    state_t1 = np.array(board.board_array, copy=True, ndmin=3)
+                    self.agent.handle(state_t0, action, reward - old_reward, state_t1)
                     if action == DO_NOTHING:
                         break
+                    if action == MOVE_DOWN:
+                        while not board.should_add_tetronimo():
+                            new_reward, lines_cleared, state_t1 = board.tick()
+                            reward += new_reward
+                            n_cleared += lines_cleared
 
                 new_reward, lines_cleared, state_t1 = board.tick()
                 reward += new_reward

@@ -36,6 +36,7 @@ class Agent():
         self.states_t1 = np.zeros((BUFFER_SIZE,1,22,10), dtype=np.int8)
         self.rewards = np.zeros([BUFFER_SIZE], dtype=np.int32)
         self.interesting_indexes = list()
+        self.current_episode_length = 0
 
     def exploit(self):
         # Simple linear exploit, max at 90% exploitations
@@ -75,13 +76,16 @@ class Agent():
         self.max_pos = min(self.max_pos + 1, BUFFER_SIZE)
         if reward != 0 and self.n_plays > 4:
             # Backups
-            indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 4, -1)]
+            indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - self.current_episode_length, -1)]
             DISCOUNT = 0.7
             if reward > 0:
                 self.interesting_indexes.append(indexes)
             for i, index in enumerate(indexes):
                 self.rewards[index] += reward * (DISCOUNT ** i) # TODO: some rounding issues here...
             self.train_on_indexes(indexes)
+            self.current_episode_length = 0
+        else:
+            self.current_episode_length += 1
         self.experience_replay()
         self.save()
 
@@ -117,23 +121,23 @@ class Agent():
         # print(np.mean(y - self.model.predict(self.states_t0[indexes], verbose=0)))
 
     def init_model(self):
-        self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
-        self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
-    #     self.model = Sequential()
-    #     self.model.add(Convolution2D(16, 2, 2, 
-    #                         activation='relu', 
-    #                         init='he_normal',
-    #                         input_shape=(1,22,10)))
-    #     self.model.add(Convolution2D(32, 4, 4, 
-    #                         activation='relu', 
-    #                         init='he_normal'))
-    #     self.model.add(Flatten())
-    #     # Dense hidden layer
-    #     self.model.add(Dense(64, activation='relu', init='he_normal'))
-    #     self.model.add(Dense(64, activation='relu', init='he_normal'))
-    #     self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_normal'))
-    #     optim = RMSprop(lr=0.001, rho=0.9, epsilon=1e-06)
-    #     self.model.compile(loss='mse', optimizer=optim)
+    #    self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
+    #    self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
+         self.model = Sequential()
+         self.model.add(Convolution2D(16, 2, 2, 
+                             activation='tanh', 
+                             init='he_normal',
+                             input_shape=(1,22,10)))
+         self.model.add(Convolution2D(32, 4, 4, 
+                             activation='tanh', 
+                             init='he_normal'))
+         self.model.add(Flatten())
+         # Dense hidden layer
+         self.model.add(Dense(64, activation='tanh', init='he_normal'))
+         self.model.add(Dense(64, activation='tanh', init='he_normal'))
+         self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_normal'))
+         optim = RMSprop(lr=0.001, rho=0.9, epsilon=1e-06)
+         self.model.compile(loss='mse', optimizer=optim)
 
 class GreedyAgent(Agent):
     def __init__(self, model_path=None, weights_path=None):
