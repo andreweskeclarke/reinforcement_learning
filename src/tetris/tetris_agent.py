@@ -39,11 +39,11 @@ class Agent():
 
     def exploit(self):
         # Simple linear exploit, max at 90% exploitations
-        if self.n_plays > 50000:
-            return random.random() < 0.50 + (0.40 * ((self.n_plays - 50000)/(float(200000))))
-        if self.n_plays > 250000:
-            return random.random() < 0.90
-        return random.random() < 0.40
+        if self.n_plays > 100000:
+            return random.random() < 0.50 + (0.30 * ((self.n_plays - 100000)/(float(300000))))
+        if self.n_plays > 400000:
+            return random.random() < 0.80
+        return random.random() < 0.50
 
     def choose_action(self, state):
         state = (state > 0).astype(np.int8)
@@ -117,23 +117,23 @@ class Agent():
         # print(np.mean(y - self.model.predict(self.states_t0[indexes], verbose=0)))
 
     def init_model(self):
-    #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
-    #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
-        self.model = Sequential()
-        self.model.add(Convolution2D(16, 2, 2, 
-                            activation='relu', 
-                            init='he_normal',
-                            input_shape=(1,22,10)))
-        self.model.add(Convolution2D(32, 4, 4, 
-                            activation='relu', 
-                            init='he_normal'))
-        self.model.add(Flatten())
-        # Dense hidden layer
-        self.model.add(Dense(64, activation='relu', init='he_normal'))
-        self.model.add(Dense(64, activation='relu', init='he_normal'))
-        self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_normal'))
-        optim = RMSprop(lr=0.001, rho=0.9, epsilon=1e-06)
-        self.model.compile(loss='mse', optimizer=optim)
+        self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
+        self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
+    #     self.model = Sequential()
+    #     self.model.add(Convolution2D(16, 2, 2, 
+    #                         activation='relu', 
+    #                         init='he_normal',
+    #                         input_shape=(1,22,10)))
+    #     self.model.add(Convolution2D(32, 4, 4, 
+    #                         activation='relu', 
+    #                         init='he_normal'))
+    #     self.model.add(Flatten())
+    #     # Dense hidden layer
+    #     self.model.add(Dense(64, activation='relu', init='he_normal'))
+    #     self.model.add(Dense(64, activation='relu', init='he_normal'))
+    #     self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_normal'))
+    #     optim = RMSprop(lr=0.001, rho=0.9, epsilon=1e-06)
+    #     self.model.compile(loss='mse', optimizer=optim)
 
 class GreedyAgent(Agent):
     def __init__(self, model_path=None, weights_path=None):

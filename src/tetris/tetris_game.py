@@ -179,12 +179,15 @@ class Tetris:
             current_height = 0
             while play_on:
                 old_reward = reward
-                state_t0 = np.array(board.board_array, copy=True, ndmin=3)
-                merge_board_and_piece(state_t0, tetronimo)
-                if screen is not None:
-                    tetris_print(state_t0, reward, screen)
-                action = self.agent.choose_action(state_t0)
-                MOVES_MAP[action](tetronimo)
+                # Two moves per tick
+                for i in range(0,4):
+                    state_t0 = np.array(board.board_array, copy=True, ndmin=3)
+                    merge_board_and_piece(state_t0, tetronimo)
+                    action = self.agent.choose_action(state_t0)
+                    MOVES_MAP[action](tetronimo)
+                    if action == DO_NOTHING:
+                        break
+
                 new_reward, lines_cleared, state_t1 = board.tick()
                 reward += new_reward
                 n_cleared += lines_cleared
