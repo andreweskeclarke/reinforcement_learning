@@ -127,17 +127,14 @@ class Agent():
     #    self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #    self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
          self.model = Sequential()
-         self.model.add(Convolution2D(16, 2, 2, 
+         self.model.add(Convolution2D(32, 3, 3, 
                              activation='tanh', 
                              init='he_normal',
                              input_shape=(1,22,10)))
-         self.model.add(Convolution2D(32, 4, 4, 
-                             activation='tanh', 
-                             init='he_normal'))
          self.model.add(Flatten())
          # Dense hidden layer
-         self.model.add(Dense(64, activation='tanh', init='he_normal'))
-         self.model.add(Dense(64, activation='tanh', init='he_normal'))
+         self.model.add(Dense(16, activation='tanh', init='he_normal'))
+         self.model.add(Dense(16, activation='tanh', init='he_normal'))
          self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_normal'))
          optim = RMSprop(lr=0.001, rho=0.9, epsilon=1e-06)
          self.model.compile(loss='mse', optimizer=optim)
