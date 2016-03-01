@@ -74,9 +74,9 @@ class Agent():
             self.flush()
         self.n_plays += 1
         self.max_pos = min(self.max_pos + 1, BUFFER_SIZE)
-        if reward != 0 and self.n_plays > 4:
+        if reward != 0:
             # Backups
-            indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - self.current_episode_length, -1)]
+            indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - (self.current_episode_length + 1), -1)]
             DISCOUNT = 0.7
             if reward > 0:
                 self.interesting_indexes.append(indexes)
