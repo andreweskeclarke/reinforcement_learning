@@ -80,7 +80,7 @@ class Agent():
                 indexes = [(self.current_pos - 1) % BUFFER_SIZE]
             else:
                 indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 1 - self.current_episode_length, -1)]
-            DISCOUNT = 0.7
+            DISCOUNT = 0.8
             if reward > 0:
                 self.interesting_indexes.append(indexes)
             for i, index in enumerate(indexes):
