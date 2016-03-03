@@ -217,7 +217,8 @@ class Tetris:
                 print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds)'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start))
 
     def generate_tetronimo(self, board):
-        return Tetromino(board, random.choice([T, L, J, O, I, S, Z]))
+        # return Tetromino(board, random.choice([T, L, J, O, I, S, Z]))
+        return Tetromino(board, random.choice([O]))
 
     def init_colors(self):
         curses.start_color()

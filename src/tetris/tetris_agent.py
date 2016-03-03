@@ -40,12 +40,11 @@ class Agent():
         self.training_runs = 0
 
     def exploit(self):
-        # Simple linear exploit, max at 90% exploitations
-        if self.n_plays > 100000:
-            return random.random() < 0.50 + (0.30 * ((self.n_plays - 100000)/(float(300000))))
-        if self.n_plays > 400000:
-            return random.random() < 0.80
-        return random.random() < 0.50
+        # if self.n_plays > 100000:
+        #     return random.random() < 0.50 + (0.30 * ((self.n_plays - 100000)/(float(300000))))
+        # if self.n_plays > 400000:
+        #     return random.random() < 0.80
+        return random.random() < 0.80
 
     def choose_action(self, state):
         state = (state > 0).astype(np.int8)
@@ -127,13 +126,10 @@ class Agent():
     #    self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #    self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
          self.model = Sequential()
-         self.model.add(Convolution2D(16, 3, 3, 
+         self.model.add(Convolution2D(32, 6, 6, 
                              activation='tanh', 
                              init='he_uniform',
                              input_shape=(1,22,10)))
-         self.model.add(Convolution2D(32, 4, 4, 
-                             activation='tanh', 
-                             init='he_uniform'))
          self.model.add(Flatten())
          self.model.add(Dense(256, activation='relu', init='he_uniform'))
          self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
