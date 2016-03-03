@@ -51,9 +51,21 @@ var yAxis = d3.svg.axis().scale(y)
 var valueline = d3.svg.line()
     .x(function(d, i) { return x(i); })
     .y(function(d, i) { return y(+d['score']); });
+
+var valuelineQ = d3.svg.line()
+    .x(function(d, i) { return x(i); })
+    .y(function(d, i) { return y(+d['q_values']); });
     
 // Adds the svg canvas
 var svg = d3.select("body")
+    .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+        .attr("transform", 
+              "translate(" + margin.left + "," + margin.top + ")");
+
+var svgQValues = d3.select("body")
     .append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
@@ -80,6 +92,29 @@ d3.csv("output.csv", function(error, data) {
 
     // Add the Y Axis
     svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis);
+
+});
+// Get the data for q values
+d3.csv("avg_q_values.csv", function(error, data) {
+    // Scale the range of the data
+    x.domain([0, data.length]);
+    y.domain(d3.extent(data, function(d) { return +d['q_values']; }));
+
+    // Add the valueline path.
+    svgQValues.append("path")
+        .attr("class", "line")
+        .attr("d", valuelineQ(data));
+
+    // Add the X Axis
+    svgQValues.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis);
+
+    // Add the Y Axis
+    svgQValues.append("g")
         .attr("class", "y axis")
         .call(yAxis);
 
