@@ -38,6 +38,7 @@ class Agent():
         self.interesting_indexes = list()
         self.current_episode_length = 0
         self.training_runs = 0
+        self.recent_q_values = deque([], 5500)
 
     def exploit(self):
         # if self.n_plays > 100000:
@@ -57,8 +58,9 @@ class Agent():
                 print(vals)
                 print(np.argmax(vals))
             choice = np.argmax(vals)
+            self.recent_q_values.append(vals[0][choice])
         else:
-            choice = random.choice(MOVES_POOL)
+            choice = random.choice(POSSIBLE_MOVES)
         return choice
         
     def handle(self, state0, action, reward, state1):
@@ -119,15 +121,17 @@ class Agent():
         DISCOUNT = 0.8
         future_rewards = DISCOUNT*(np.amax(self.model.predict(self.states_t1[indexes], verbose=0), axis=1))
         for i, a in enumerate(self.actions[indexes]):
-            y[i][a] = self.rewards[indexes][i] + future_rewards[i]
+            a_index = np.where(POSSIBLE_MOVES == a)[0]
+            y[i][a_index] = self.rewards[indexes][i] + future_rewards[i]
         self.model.train_on_batch(self.states_t0[indexes], y)
 
     def init_model(self):
     #    self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #    self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
          self.model = Sequential()
-         self.model.add(Convolution2D(32, 6, 6, 
+         self.model.add(Convolution2D(32, 4, 4, 
                              activation='tanh', 
+                             subsample=(2,2),
                              init='he_uniform',
                              input_shape=(1,22,10)))
          self.model.add(Flatten())
@@ -156,8 +160,8 @@ class GreedyAgent(Agent):
 
     def choose_action(self, state):
         time.sleep(0.05)
-        return random.choice(MOVES_POOL)
-        # return np.argmax(self.model.predict(np.array(state, ndmin=4), batch_size=1, verbose=0))
+        # return random.choice(POSSIBLE_MOVES)
+        return np.argmax(self.model.predict(np.array(state, ndmin=4), batch_size=1, verbose=0))
 
     def handle(self, s0, a, r, s1):
         pass

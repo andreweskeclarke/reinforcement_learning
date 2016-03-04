@@ -28,19 +28,12 @@ MOVES_MAP = [ lambda x:x.rotate_left(),
               lambda x:None ]
 
 POSSIBLE_MOVES = np.array([
-    ROTATE_LEFT,
-    ROTATE_RIGHT,
+#    ROTATE_LEFT,
+#    ROTATE_RIGHT,
     MOVE_RIGHT,
     MOVE_LEFT,
     MOVE_DOWN,
-    DO_NOTHING ])
-
-MOVES_POOL = np.array([ ROTATE_LEFT,
-                        ROTATE_RIGHT,
-                        MOVE_RIGHT,
-                        MOVE_LEFT,
-                        MOVE_DOWN,
-                        DO_NOTHING ], np.int8)
+    DO_NOTHING ],np.int8)
 
 class Tetromino:
     def __init__(self, board, offsets):
@@ -166,7 +159,8 @@ class Tetris:
         print('Begin playing!')
         if screen is not None:
             self.init_colors()
-        running_scores = deque([], 250)
+        RUNNING_AVG = 100
+        running_scores = deque([], RUNNING_AVG)
         while True:
             board = Board()
             play_on = True
@@ -211,9 +205,9 @@ class Tetris:
             running_scores.append(reward)
             if screen is not None:
                 print_game_over(board, tetronimo, reward, screen)
-            else:
-                # if bool(random.getrandbits(1)) and bool(random.getrandbits(1)) and len(running_scores) > 25:
+            elif len(running_scores) >= RUNNING_AVG:
                 avg = int(sum(running_scores)/len(running_scores))
+                print('Average Q-values: {}'.format( sum(self.agent.recent_q_values) / float(len(self.agent.recent_q_values))))
                 print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds)'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start))
 
     def generate_tetronimo(self, board):
