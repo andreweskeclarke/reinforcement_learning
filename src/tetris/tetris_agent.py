@@ -39,9 +39,9 @@ class Agent():
         self.interesting_indexes = list()
         self.current_episode_length = 0
         self.training_runs = 0
-        self.recent_q_values = deque([], 5500)
-        self.recent_accuracies = deque([], 10*N_ROLLING_AVG)
-        self.recent_losses = deque([], 10*N_ROLLING_AVG)
+        self.recent_q_values = deque([], 10*N_REPLAYS_PER_ROUND)
+        self.recent_accuracies = deque([], 5*N_ROLLING_AVG)
+        self.recent_losses = deque([], 5*N_ROLLING_AVG)
         self.last_avg_rewards = 0
 
     def exploit(self):
