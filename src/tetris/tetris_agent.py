@@ -75,7 +75,7 @@ class Agent():
         if self.current_pos == 0: # Rolled over on indexes
             self.last_avg_rewards = sum(self.rewards) / len(self.rewards)
             self.interesting_indexes = list()
-        if reward > 2* (self.last_avg_rewards):
+        if reward !=0:
             # Backups
             if self.current_episode_length == 0:
                 indexes = [(self.current_pos - 1) % BUFFER_SIZE]
@@ -83,11 +83,10 @@ class Agent():
                 indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 1 - min(6, self.current_episode_length), -1)]
             for i, index in enumerate(indexes):
                 self.rewards[index] += reward * (DISCOUNT ** i) # TODO: some rounding issues here...
-            self.interesting_indexes.append(indexes)
+            if reward > 2* (self.last_avg_rewards):
+                self.interesting_indexes.append(indexes)
             self.train_on_indexes(indexes)
             self.current_episode_length = 0
-        elif reward != 0:
-            self.current_episode_length = 0 
         else:
             self.current_episode_length += 1
         self.experience_replay()
