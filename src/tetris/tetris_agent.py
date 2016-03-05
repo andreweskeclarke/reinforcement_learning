@@ -13,7 +13,7 @@ import time
 import random
 import math
 
-N_REPLAYS_PER_ROUND = 50
+N_REPLAYS_PER_ROUND = 10
 
 # SARS - [State_0, Action, Reward, State_1]
 STATE0_INDEX = 0
@@ -41,7 +41,7 @@ class Agent():
         self.recent_q_values = deque([], 5500)
 
     def exploit(self):
-        return random.random() < 0.80
+        return random.random() < 0.90
 
     def choose_action(self, state):
         state = (state > 0).astype(np.int8)
@@ -50,7 +50,7 @@ class Agent():
             if random.random() < 0.005:
                 print('Some predicted values for a board. Trained against {} examples so far.'.format(self.training_runs))
                 print(np.array(state, ndmin=4))
-                print('[ROTATE_LEFT, ROTATE_RIGHT, MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN, DO_NOTHING]')
+                print('[MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN, DO_NOTHING]')
                 print(vals)
                 print(np.argmax(vals))
             choice = np.argmax(vals)
@@ -70,17 +70,22 @@ class Agent():
         self.current_pos = (self.current_pos + 1) % BUFFER_SIZE
         self.n_plays += 1
         self.max_pos = min(self.max_pos + 1, BUFFER_SIZE)
-        if reward != 0:
+        if self.current_pos == 0: # Rolled over on indexes
+            self.interesting_indexes = list()
+        if reward > 2* (sum(self.rewards) / len(self.rewards)):
             # Backups
             if self.current_episode_length == 0:
                 indexes = [(self.current_pos - 1) % BUFFER_SIZE]
             else:
-                indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 1 - self.current_episode_length, -1)]
+                indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 1 - min(6, self.current_episode_length), -1)]
             DISCOUNT = 0.7
             for i, index in enumerate(indexes):
                 self.rewards[index] += reward * (DISCOUNT ** i) # TODO: some rounding issues here...
+            self.interesting_indexes.append(indexes)
             self.train_on_indexes(indexes)
             self.current_episode_length = 0
+        elif reward != 0:
+            self.current_episode_length = 0 
         else:
             self.current_episode_length += 1
         self.experience_replay()
@@ -100,6 +105,9 @@ class Agent():
     def experience_replay(self):
         indexes = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
         self.train_on_indexes(indexes)
+        if len(self.interesting_indexes) > 0:
+            iss = random.choice(self.interesting_indexes)
+            self.train_on_indexes(iss)
 
     def train_on_indexes(self, indexes):
         self.training_runs += len(indexes)

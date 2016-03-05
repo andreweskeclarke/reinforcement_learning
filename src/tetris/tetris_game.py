@@ -161,7 +161,9 @@ class Tetris:
             self.init_colors()
         RUNNING_AVG = 100
         running_scores = deque([], RUNNING_AVG)
+        n_games = 0
         while True:
+            n_games += 1
             board = Board()
             play_on = True
             tetronimo = self.generate_tetronimo(board)
@@ -205,10 +207,15 @@ class Tetris:
             running_scores.append(reward)
             if screen is not None:
                 print_game_over(board, tetronimo, reward, screen)
-            elif len(running_scores) >= RUNNING_AVG:
+            elif len(running_scores) >= (0.8) * RUNNING_AVG:
                 avg = int(sum(running_scores)/len(running_scores))
                 print('Average Q-values: {}'.format( sum(self.agent.recent_q_values) / float(len(self.agent.recent_q_values))))
-                print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds)'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start))
+                print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))
+            else:
+                avg = int(sum(running_scores)/len(running_scores))
+                print('Not charting...')
+                print('Avg: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))
+
 
     def generate_tetronimo(self, board):
         # return Tetromino(board, random.choice([T, L, J, O, I, S, Z]))
