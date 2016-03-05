@@ -13,7 +13,7 @@ import time
 import random
 import math
 
-N_REPLAYS_PER_ROUND = 5
+N_REPLAYS_PER_ROUND = 50
 
 # SARS - [State_0, Action, Reward, State_1]
 STATE0_INDEX = 0
@@ -41,10 +41,6 @@ class Agent():
         self.recent_q_values = deque([], 5500)
 
     def exploit(self):
-        # if self.n_plays > 100000:
-        #     return random.random() < 0.50 + (0.30 * ((self.n_plays - 100000)/(float(300000))))
-        # if self.n_plays > 400000:
-        #     return random.random() < 0.80
         return random.random() < 0.80
 
     def choose_action(self, state):
@@ -72,8 +68,6 @@ class Agent():
         self.rewards[self.current_pos] = reward
         self.states_t1[self.current_pos] = state1
         self.current_pos = (self.current_pos + 1) % BUFFER_SIZE
-        if self.current_pos == 0:
-            self.flush()
         self.n_plays += 1
         self.max_pos = min(self.max_pos + 1, BUFFER_SIZE)
         if reward != 0:
@@ -82,8 +76,7 @@ class Agent():
                 indexes = [(self.current_pos - 1) % BUFFER_SIZE]
             else:
                 indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 1 - self.current_episode_length, -1)]
-            DISCOUNT = 0.8
-            self.interesting_indexes.append(indexes)
+            DISCOUNT = 0.7
             for i, index in enumerate(indexes):
                 self.rewards[index] += reward * (DISCOUNT ** i) # TODO: some rounding issues here...
             self.train_on_indexes(indexes)
@@ -92,9 +85,6 @@ class Agent():
             self.current_episode_length += 1
         self.experience_replay()
         self.save()
-
-    def flush(self):
-        self.interesting_indexes = list()
 
     def save(self):
         self.save_requests += 1
@@ -108,12 +98,8 @@ class Agent():
             print('Saved: {} and {}'.format(model_file, weights_file))
 
     def experience_replay(self):
-        if len(self.interesting_indexes) > 0:
-            indexes = list()
-            for i in range(0, N_REPLAYS_PER_ROUND):
-                indexes += random.choice(self.interesting_indexes)
-            random.shuffle(indexes)
-            self.train_on_indexes(indexes)
+        indexes = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
+        self.train_on_indexes(indexes)
 
     def train_on_indexes(self, indexes):
         self.training_runs += len(indexes)
@@ -126,8 +112,8 @@ class Agent():
         self.model.train_on_batch(self.states_t0[indexes], y)
 
     def init_model(self):
-    #    self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
-    #    self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
+    #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
+    #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
          self.model = Sequential()
          self.model.add(Convolution2D(32, 4, 4, 
                              activation='tanh', 
