@@ -13,7 +13,7 @@ import time
 import random
 import math
 
-N_REPLAYS_PER_ROUND = 10
+N_REPLAYS_PER_ROUND = 25
 
 # SARS - [State_0, Action, Reward, State_1]
 STATE0_INDEX = 0
@@ -40,8 +40,8 @@ class Agent():
         self.current_episode_length = 0
         self.training_runs = 0
         self.recent_q_values = deque([], 5500)
-        self.recent_accuracies = deque([], 5*N_ROLLING_AVG)
-        self.recent_losses = deque([], 5*N_ROLLING_AVG)
+        self.recent_accuracies = deque([], 10*N_ROLLING_AVG)
+        self.recent_losses = deque([], 10*N_ROLLING_AVG)
         self.last_avg_rewards = 0
 
     def exploit(self):
@@ -54,7 +54,7 @@ class Agent():
             if random.random() < 0.005:
                 print('Some predicted values for a board. Trained against {} examples so far.'.format(self.training_runs))
                 print(np.array(state, ndmin=4))
-                print('[MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN, DO_NOTHING]')
+                print('[MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN]')
                 print(vals)
                 print(np.argmax(vals))
             choice = np.argmax(vals)
@@ -106,12 +106,11 @@ class Agent():
             print('Saved: {} and {}'.format(model_file, weights_file))
 
     def experience_replay(self):
+        random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
         if len(self.interesting_indexes) > 0:
             interesting_idxs = random.choice(self.interesting_indexes)
-            random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
             self.train_on_indexes(np.concatenate((random_idxs, interesting_idxs)))
         else:
-            random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
             self.train_on_indexes(random_idxs)
 
     def train_on_indexes(self, indexes, keep_results=True):

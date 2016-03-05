@@ -220,7 +220,7 @@ class Tetris:
                 print('Average Q-values: {}'.format(avg_q_value))
                 print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))
 
-                if len(running_scores) >= N_ROLLING_AVG:
+                if len(running_scores) >= N_ROLLING_AVG/3:
                     #print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy')
                     print('output: {}, {}, {}, {}, {}, {}'.format(n_games, avg, avg_q_value, n_cleared, avg_loss, avg_accuracy))
 
