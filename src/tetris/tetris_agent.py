@@ -33,13 +33,15 @@ class Agent():
         self.current_pos = 0
         self.n_plays = 0
         self.states_t0 = np.zeros((BUFFER_SIZE,1,BOARD_HEIGHT,BOARD_WIDTH), dtype=np.int8)
-        self.actions = np.zeros([BUFFER_SIZE], dtype=np.int16)
+        self.actions = np.zeros([BUFFER_SIZE], dtype=np.int8)
         self.states_t1 = np.zeros((BUFFER_SIZE,1,BOARD_HEIGHT,BOARD_WIDTH), dtype=np.int8)
-        self.rewards = np.zeros([BUFFER_SIZE], dtype=np.int32)
+        self.rewards = np.zeros([BUFFER_SIZE], dtype=np.int16)
         self.interesting_indexes = list()
         self.current_episode_length = 0
         self.training_runs = 0
         self.recent_q_values = deque([], 5500)
+        self.recent_accuracies = deque([], 5*N_ROLLING_AVG)
+        self.recent_losses = deque([], 5*N_ROLLING_AVG)
         self.last_avg_rewards = 0
 
     def exploit(self):
@@ -85,7 +87,7 @@ class Agent():
                 self.rewards[index] += reward * (DISCOUNT ** i) # TODO: some rounding issues here...
             if reward > 2* (self.last_avg_rewards):
                 self.interesting_indexes.append(indexes)
-            self.train_on_indexes(indexes)
+            self.train_on_indexes(indexes, False)
             self.current_episode_length = 0
         else:
             self.current_episode_length += 1
@@ -112,7 +114,7 @@ class Agent():
             random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
             self.train_on_indexes(random_idxs)
 
-    def train_on_indexes(self, indexes):
+    def train_on_indexes(self, indexes, keep_results=True):
         start = time.time()
         self.training_runs += len(indexes)
         y = self.model.predict(self.states_t0[indexes], verbose=0)
@@ -120,7 +122,10 @@ class Agent():
         for i, a in enumerate(self.actions[indexes]):
             a_index = np.where(POSSIBLE_MOVES == a)[0]
             y[i][a_index] = self.rewards[indexes][i] + future_rewards[i]
-        self.model.train_on_batch(self.states_t0[indexes], y)
+        loss, accuracy = self.model.train_on_batch(self.states_t0[indexes], y, accuracy=True)
+        if keep_results:
+            self.recent_losses.append(loss)
+            self.recent_accuracies.append(accuracy)
 
     def init_model(self):
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
@@ -129,12 +134,14 @@ class Agent():
          self.model.add(Convolution2D(32, 4, 4, 
                              activation='tanh', 
                              subsample=(1,1),
-                             init='he_uniform',
+                             init='uniform',
                              input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
          self.model.add(Flatten())
-         self.model.add(Dense(256, activation='relu', init='he_uniform'))
+         self.model.add(Dropout(0.5))
+         self.model.add(Dense(256, activation='tanh', init='uniform'))
+         self.model.add(Dropout(0.5))
          self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
-         optim = RMSprop(lr=0.001, rho=0.9, epsilon=1e-06)
+         optim = SGD(lr=0.01, momentum=0.0, decay=0.0, nesterov=True)
          self.model.compile(loss='mse', optimizer=optim)
 
 class GreedyAgent(Agent):

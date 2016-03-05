@@ -12,6 +12,7 @@ from offsets import *
 
 TIME_PER_TICK = 0
 TIME_BETWEEN_ROUNDS = 0.5
+N_ROLLING_AVG = 100
 
 ROTATE_LEFT = 0
 ROTATE_RIGHT = 1
@@ -35,8 +36,8 @@ POSSIBLE_MOVES = np.array([
 #    ROTATE_RIGHT,
     MOVE_RIGHT,
     MOVE_LEFT,
-    MOVE_DOWN,
-    DO_NOTHING ],np.int8)
+    MOVE_DOWN ],np.int8)
+#    DO_NOTHING ],np.int8)
 
 class Tetromino:
     def __init__(self, board, offsets):
@@ -110,7 +111,7 @@ class Board:
     def __freeze_tetronimo__(self):
         n_cleared_rows = 0
         for x, y, v in self.current_tetronimo.occupied_squares():
-            self.current_height = max(self.current_height, y)
+            self.current_height = max(self.current_height, y + 1) # 0 based
             if not self.is_out(x, y):
                 self.board_array[y][x] = v
             if all(self.board_array[y]): 
@@ -146,7 +147,7 @@ class Board:
                 n_cleared_rows = self.__freeze_tetronimo__()
                 self.current_tetronimo = None
                 if self.current_height > old_height:
-                    points = points - 1*(self.current_height - old_height)
+                    points = points - (self.current_height - old_height)
                 else:
                     points += 2
                 points += [0, 15, 30, 60, 120][n_cleared_rows]
@@ -163,9 +164,9 @@ class Tetris:
         print('Begin playing!')
         if screen is not None:
             self.init_colors()
-        N_ROLLING_AVG = 100
         running_scores = deque([], N_ROLLING_AVG)
         n_games = 0
+        print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy')
         while True:
             n_games += 1
             board = Board()
@@ -211,14 +212,17 @@ class Tetris:
             running_scores.append(reward)
             if screen is not None:
                 print_game_over(board, tetronimo, reward, screen)
-            elif len(running_scores) >= N_ROLLING_AVG:
-                avg = (sum(running_scores)/float(len(running_scores)))
-                print('Average Q-values: {}'.format( sum(self.agent.recent_q_values) / float(len(self.agent.recent_q_values))))
-                print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))
             else:
                 avg = (sum(running_scores)/float(len(running_scores)))
-                print('Not charting...')
-                print('Avg: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))
+                avg_q_value = sum(self.agent.recent_q_values) / float(len(self.agent.recent_q_values))
+                avg_loss = sum(self.agent.recent_losses) / float(len(self.agent.recent_losses))
+                avg_accuracy = sum(self.agent.recent_accuracies) / float(len(self.agent.recent_accuracies))
+                print('Average Q-values: {}'.format(avg_q_value))
+                print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))
+
+                if len(running_scores) >= N_ROLLING_AVG:
+                    #print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy')
+                    print('output: {}, {}, {}, {}, {}, {}'.format(n_games, avg, avg_q_value, n_cleared, avg_loss, avg_accuracy))
 
 
     def generate_tetronimo(self, board):
