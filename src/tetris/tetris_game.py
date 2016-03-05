@@ -20,6 +20,9 @@ MOVE_LEFT = 3
 MOVE_DOWN = 4
 DO_NOTHING = 5
 
+BOARD_HEIGHT = 14
+BOARD_WIDTH = 6
+
 MOVES_MAP = [ lambda x:x.rotate_left(),
               lambda x:x.rotate_right(),
               lambda x:x.move_right(),
@@ -89,7 +92,7 @@ class Tetromino:
         return squares
 
 class Board:
-    def __init__(self, width=10, height=22):
+    def __init__(self, width=BOARD_WIDTH, height=BOARD_HEIGHT):
         self.height = height
         self.width = width
         self.starting_x = math.floor(width / 2)
@@ -142,10 +145,11 @@ class Board:
             if not self.current_tetronimo.can_move_down():
                 n_cleared_rows = self.__freeze_tetronimo__()
                 self.current_tetronimo = None
-                points += 10
                 if self.current_height > old_height:
-                    points = points - 10*(self.current_height - old_height)
-                points += [0, 400, 1000, 3000, 12000][n_cleared_rows]
+                    points = points - 1*(self.current_height - old_height)
+                else:
+                    points += 1
+                points += [0, 5, 10, 20, 40][n_cleared_rows]
         return points, n_cleared_rows, next_state
 
 class Tetris:
@@ -159,8 +163,8 @@ class Tetris:
         print('Begin playing!')
         if screen is not None:
             self.init_colors()
-        RUNNING_AVG = 100
-        running_scores = deque([], RUNNING_AVG)
+        N_ROLLING_AVG = 100
+        running_scores = deque([], N_ROLLING_AVG)
         n_games = 0
         while True:
             n_games += 1
@@ -207,7 +211,7 @@ class Tetris:
             running_scores.append(reward)
             if screen is not None:
                 print_game_over(board, tetronimo, reward, screen)
-            elif len(running_scores) >= (0.8) * RUNNING_AVG:
+            elif len(running_scores) >= N_ROLLING_AVG:
                 avg = int(sum(running_scores)/len(running_scores))
                 print('Average Q-values: {}'.format( sum(self.agent.recent_q_values) / float(len(self.agent.recent_q_values))))
                 print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))

@@ -31,14 +31,15 @@ class Agent():
         self.max_pos = 0
         self.current_pos = 0
         self.n_plays = 0
-        self.states_t0 = np.zeros((BUFFER_SIZE,1,22,10), dtype=np.int8)
+        self.states_t0 = np.zeros((BUFFER_SIZE,1,BOARD_HEIGHT,BOARD_WIDTH), dtype=np.int8)
         self.actions = np.zeros([BUFFER_SIZE], dtype=np.int16)
-        self.states_t1 = np.zeros((BUFFER_SIZE,1,22,10), dtype=np.int8)
+        self.states_t1 = np.zeros((BUFFER_SIZE,1,BOARD_HEIGHT,BOARD_WIDTH), dtype=np.int8)
         self.rewards = np.zeros([BUFFER_SIZE], dtype=np.int32)
         self.interesting_indexes = list()
         self.current_episode_length = 0
         self.training_runs = 0
         self.recent_q_values = deque([], 5500)
+        self.last_avg_rewards = 0
 
     def exploit(self):
         return random.random() < 0.90
@@ -71,8 +72,9 @@ class Agent():
         self.n_plays += 1
         self.max_pos = min(self.max_pos + 1, BUFFER_SIZE)
         if self.current_pos == 0: # Rolled over on indexes
+            self.last_avg_rewards = sum(self.rewards) / len(self.rewards)
             self.interesting_indexes = list()
-        if reward > 2* (sum(self.rewards) / len(self.rewards)):
+        if reward > 2* (self.last_avg_rewards):
             # Backups
             if self.current_episode_length == 0:
                 indexes = [(self.current_pos - 1) % BUFFER_SIZE]
@@ -103,13 +105,16 @@ class Agent():
             print('Saved: {} and {}'.format(model_file, weights_file))
 
     def experience_replay(self):
-        indexes = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
-        self.train_on_indexes(indexes)
         if len(self.interesting_indexes) > 0:
-            iss = random.choice(self.interesting_indexes)
-            self.train_on_indexes(iss)
+            interesting_idxs = random.choice(self.interesting_indexes)
+            random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
+            self.train_on_indexes(np.concatenate((random_idxs, interesting_idxs)))
+        else:
+            random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
+            self.train_on_indexes(random_idxs)
 
     def train_on_indexes(self, indexes):
+        start = time.time()
         self.training_runs += len(indexes)
         y = self.model.predict(self.states_t0[indexes], verbose=0)
         DISCOUNT = 0.8
@@ -125,9 +130,9 @@ class Agent():
          self.model = Sequential()
          self.model.add(Convolution2D(32, 4, 4, 
                              activation='tanh', 
-                             subsample=(2,2),
+                             subsample=(1,1),
                              init='he_uniform',
-                             input_shape=(1,22,10)))
+                             input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
          self.model.add(Flatten())
          self.model.add(Dense(256, activation='relu', init='he_uniform'))
          self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
