@@ -21,7 +21,7 @@ MOVE_DOWN = 4
 DO_NOTHING = 5
 
 BOARD_HEIGHT = 14
-BOARD_WIDTH = 6
+BOARD_WIDTH = 8
 
 MOVES_MAP = [ lambda x:x.rotate_left(),
               lambda x:x.rotate_right(),
@@ -148,8 +148,8 @@ class Board:
                 if self.current_height > old_height:
                     points = points - 1*(self.current_height - old_height)
                 else:
-                    points += 1
-                points += [0, 5, 10, 20, 40][n_cleared_rows]
+                    points += 2
+                points += [0, 15, 30, 60, 120][n_cleared_rows]
         return points, n_cleared_rows, next_state
 
 class Tetris:
@@ -212,11 +212,11 @@ class Tetris:
             if screen is not None:
                 print_game_over(board, tetronimo, reward, screen)
             elif len(running_scores) >= N_ROLLING_AVG:
-                avg = int(sum(running_scores)/len(running_scores))
+                avg = (sum(running_scores)/float(len(running_scores)))
                 print('Average Q-values: {}'.format( sum(self.agent.recent_q_values) / float(len(self.agent.recent_q_values))))
                 print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))
             else:
-                avg = int(sum(running_scores)/len(running_scores))
+                avg = (sum(running_scores)/float(len(running_scores)))
                 print('Not charting...')
                 print('Avg: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))
 

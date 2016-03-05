@@ -22,6 +22,7 @@ REWARD_INDEX = 2
 STATE1_INDEX = 3
 
 BUFFER_SIZE = 500000
+DISCOUNT = 0.7
 
 class Agent():
     def __init__(self):
@@ -80,7 +81,6 @@ class Agent():
                 indexes = [(self.current_pos - 1) % BUFFER_SIZE]
             else:
                 indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 1 - min(6, self.current_episode_length), -1)]
-            DISCOUNT = 0.7
             for i, index in enumerate(indexes):
                 self.rewards[index] += reward * (DISCOUNT ** i) # TODO: some rounding issues here...
             self.interesting_indexes.append(indexes)
@@ -117,7 +117,6 @@ class Agent():
         start = time.time()
         self.training_runs += len(indexes)
         y = self.model.predict(self.states_t0[indexes], verbose=0)
-        DISCOUNT = 0.8
         future_rewards = DISCOUNT*(np.amax(self.model.predict(self.states_t1[indexes], verbose=0), axis=1))
         for i, a in enumerate(self.actions[indexes]):
             a_index = np.where(POSSIBLE_MOVES == a)[0]
