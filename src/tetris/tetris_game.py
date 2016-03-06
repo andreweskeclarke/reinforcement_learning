@@ -214,13 +214,13 @@ class Tetris:
                 print_game_over(board, tetronimo, reward, screen)
             else:
                 avg = (sum(running_scores)/float(len(running_scores)))
-                avg_q_value = sum(self.agent.recent_q_values) / float(len(self.agent.recent_q_values))
-                avg_loss = sum(self.agent.recent_losses) / float(len(self.agent.recent_losses))
-                avg_accuracy = sum(self.agent.recent_accuracies) / float(len(self.agent.recent_accuracies))
                 print('Average Q-values: {}'.format(avg_q_value))
                 print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))
 
                 if len(running_scores) >= N_ROLLING_AVG/3:
+                    avg_q_value = sum(self.agent.recent_q_values) / float(len(self.agent.recent_q_values))
+                    avg_loss = sum(self.agent.recent_losses) / float(len(self.agent.recent_losses))
+                    avg_accuracy = sum(self.agent.recent_accuracies) / float(len(self.agent.recent_accuracies))
                     #print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy')
                     print('output: {}, {}, {}, {}, {}, {}'.format(n_games, avg, avg_q_value, n_cleared, avg_loss, avg_accuracy))
 
