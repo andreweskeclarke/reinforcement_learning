@@ -45,7 +45,8 @@ class Agent():
         self.last_avg_rewards = 0
 
     def exploit(self):
-        return random.random() < 0.90
+        e = 1 - (0.6**(self.training_runs / 1e6))
+        return random.random() < e
 
     def choose_action(self, state):
         state = (state > 0).astype(np.int8)
@@ -115,7 +116,6 @@ class Agent():
 
     def train_on_indexes(self, indexes, keep_results=True):
         start = time.time()
-        self.training_runs += len(indexes)
         y = self.model.predict(self.states_t0[indexes], verbose=0)
         future_rewards = DISCOUNT*(np.amax(self.model.predict(self.states_t1[indexes], verbose=0), axis=1))
         for i, a in enumerate(self.actions[indexes]):
@@ -123,6 +123,7 @@ class Agent():
             y[i][a_index] = self.rewards[indexes][i] + future_rewards[i]
         loss, accuracy = self.model.train_on_batch(self.states_t0[indexes], y, accuracy=True)
         if keep_results:
+            self.training_runs += len(indexes)
             self.recent_losses.append(loss)
             self.recent_accuracies.append(accuracy)
 
