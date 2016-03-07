@@ -45,8 +45,10 @@ class Agent():
         self.last_avg_rewards = 0
 
     def exploit(self):
-        e = 1 - (0.6**(self.training_runs / 1e6))
-        return random.random() < e
+        return random.random() < self.epsilon()
+
+    def epsilon(self):
+        return min(1 - (0.5**(self.training_runs / (3 * 1e6))), 0.99)
 
     def choose_action(self, state):
         state = (state > 0).astype(np.int8)
@@ -131,12 +133,18 @@ class Agent():
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
          self.model = Sequential()
-         self.model.add(Convolution2D(32, 4, 4, 
+         self.model.add(Convolution2D(8, 2, 2, 
                              activation='tanh', 
                              subsample=(1,1),
                              init='uniform',
                              input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+         self.model.add(Convolution2D(32, 6, 6, 
+                             activation='tanh', 
+                             subsample=(1,1),
+                             init='uniform'))
          self.model.add(Flatten())
+         self.model.add(Dropout(0.5))
+         self.model.add(Dense(256, activation='tanh', init='uniform'))
          self.model.add(Dropout(0.5))
          self.model.add(Dense(256, activation='tanh', init='uniform'))
          self.model.add(Dropout(0.5))

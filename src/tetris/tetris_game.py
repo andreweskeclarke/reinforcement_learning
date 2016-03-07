@@ -166,7 +166,7 @@ class Tetris:
             self.init_colors()
         running_scores = deque([], N_ROLLING_AVG)
         n_games = 0
-        print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy')
+        print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy, training_runs, epsilon')
         while True:
             n_games += 1
             board = Board()
@@ -212,7 +212,7 @@ class Tetris:
             running_scores.append(reward)
             if screen is not None:
                 print_game_over(board, tetronimo, reward, screen)
-            else:
+            elif len(self.agent.recent_q_values) > 0:
                 avg = (sum(running_scores)/float(len(running_scores)))
                 print('Average Q-values: {}'.format(avg_q_value))
                 print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))
@@ -222,7 +222,7 @@ class Tetris:
                     avg_loss = sum(self.agent.recent_losses) / float(len(self.agent.recent_losses))
                     avg_accuracy = sum(self.agent.recent_accuracies) / float(len(self.agent.recent_accuracies))
                     #print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy')
-                    print('output: {}, {}, {}, {}, {}, {}'.format(n_games, avg, avg_q_value, n_cleared, avg_loss, avg_accuracy))
+                    print('output: {}, {}, {}, {}, {}, {}, {}, {}'.format(n_games, avg, avg_q_value, n_cleared, avg_loss, avg_accuracy, self.agent.training_runs, agent.epsilon()))
 
 
     def generate_tetronimo(self, board):
