@@ -222,7 +222,7 @@ class Tetris:
                     avg_loss = sum(self.agent.recent_losses) / float(len(self.agent.recent_losses))
                     avg_accuracy = sum(self.agent.recent_accuracies) / float(len(self.agent.recent_accuracies))
                     #print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy')
-                    print('output: {}, {}, {}, {}, {}, {}, {}, {}'.format(n_games, avg, avg_q_value, n_cleared, avg_loss, avg_accuracy, self.agent.training_runs, agent.epsilon()))
+                    print('output: {}, {}, {}, {}, {}, {}, {}, {}'.format(n_games, avg, avg_q_value, n_cleared, avg_loss, avg_accuracy, self.agent.training_runs, self.agent.epsilon()))
 
 
     def generate_tetronimo(self, board):
