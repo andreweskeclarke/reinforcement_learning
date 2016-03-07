@@ -33,13 +33,13 @@ path {
 
 // Set the dimensions of the canvas / graph
 var margin = {top: 30, right: 20, bottom: 30, left: 50},
-    width = 600 - margin.left - margin.right,
-    height = 2*(270 - margin.top - margin.bottom);
+    width = 500 - margin.left - margin.right,
+    height = 2*(220 - margin.top - margin.bottom);
 
 // Get the data
 d3.csv("output.csv", function(error, data) {
 
-    var fields = ["avg_score", "avg_q_value", "n_lines", "loss", "accuracy"];
+    var fields = ["avg_score", "avg_q_value", "n_lines", "loss", "epsilon"];
     for(var i = 0; i < fields.length; i++) {
         var fieldName = fields[i];
         // Set the ranges
