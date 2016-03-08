@@ -48,7 +48,13 @@ class Agent():
         return random.random() < self.epsilon()
 
     def epsilon(self):
-        return min(1 - (0.5**(self.training_runs / (3 * 1e6))), 0.99)
+        if self.training_runs < 2000:
+            return 0.2
+        elif self.training_runs < 4000:
+            return 0.6
+        elif self.training_runs < 6000:
+            return 0.8
+        return 0.99
 
     def choose_action(self, state):
         state = (state > 0).astype(np.int8)
