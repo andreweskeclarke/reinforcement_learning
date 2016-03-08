@@ -36,23 +36,26 @@ class Agent():
         self.actions = np.zeros([BUFFER_SIZE], dtype=np.int8)
         self.states_t1 = np.zeros((BUFFER_SIZE,1,BOARD_HEIGHT,BOARD_WIDTH), dtype=np.int8)
         self.rewards = np.zeros([BUFFER_SIZE], dtype=np.int16)
-        self.interesting_indexes = list()
+        self.interesting_episodes = list()
         self.current_episode_length = 0
         self.training_runs = 0
         self.recent_q_values = deque([], 10*N_REPLAYS_PER_ROUND)
         self.recent_accuracies = deque([], 5*N_ROLLING_AVG)
         self.recent_losses = deque([], 5*N_ROLLING_AVG)
         self.last_avg_rewards = 0
+        self.n_games = 0
 
     def exploit(self):
         return random.random() < self.epsilon()
 
     def epsilon(self):
-        if self.training_runs < 2000:
+        if self.n_games < 2000:
             return 0.2
         elif self.training_runs < 4000:
-            return 0.6
+            return 0.4
         elif self.training_runs < 6000:
+            return 0.6
+        elif self.training_runs < 8000:
             return 0.8
         return 0.99
 
@@ -85,7 +88,6 @@ class Agent():
         self.max_pos = min(self.max_pos + 1, BUFFER_SIZE)
         if self.current_pos == 0: # Rolled over on indexes
             self.last_avg_rewards = sum(self.rewards) / len(self.rewards)
-            self.interesting_indexes = list()
         if reward !=0:
             # Backups
             if self.current_episode_length == 0:
@@ -94,8 +96,9 @@ class Agent():
                 indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 1 - min(6, self.current_episode_length), -1)]
             for i, index in enumerate(indexes):
                 self.rewards[index] += reward * (DISCOUNT ** i) # TODO: some rounding issues here...
-            if reward > 2* (self.last_avg_rewards):
-                self.interesting_indexes.append(indexes)
+            if reward > 2:
+                states, y = self.training_data_for_indexes(indexes)
+                self.interesting_episodes.append((np.copy(states), np.copy(y)))
             self.train_on_indexes(indexes, False)
             self.current_episode_length = 0
         else:
@@ -116,22 +119,28 @@ class Agent():
 
     def experience_replay(self):
         random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
-        if len(self.interesting_indexes) > 0:
-            interesting_idxs = random.choice(self.interesting_indexes)
-            self.train_on_indexes(np.concatenate((random_idxs, interesting_idxs)))
-        else:
-            self.train_on_indexes(random_idxs)
+        self.train_on_indexes(random_idxs)
+        if len(self.interesting_episodes) > 0 and bool(random.getrandbits(1)):
+            states, y = random.choice(self.interesting_episodes)
+            self.train_on(states, y, False)
 
     def train_on_indexes(self, indexes, keep_results=True):
-        start = time.time()
+        states, y = self.training_data_for_indexes(indexes)
+        self.train_on(self.states_t0[indexes], y, keep_results)
+
+    def training_data_for_indexes(self, indexes):
         y = self.model.predict(self.states_t0[indexes], verbose=0)
         future_rewards = DISCOUNT*(np.amax(self.model.predict(self.states_t1[indexes], verbose=0), axis=1))
         for i, a in enumerate(self.actions[indexes]):
             a_index = np.where(POSSIBLE_MOVES == a)[0]
             y[i][a_index] = self.rewards[indexes][i] + future_rewards[i]
-        loss, accuracy = self.model.train_on_batch(self.states_t0[indexes], y, accuracy=True)
+        states = self.states_t0[indexes]
+        return (states, y)
+
+    def train_on(self, states, y, keep_results=True):
+        loss, accuracy = self.model.train_on_batch(states, y, accuracy=True)
         if keep_results:
-            self.training_runs += len(indexes)
+            self.training_runs += y.shape[0]
             self.recent_losses.append(loss)
             self.recent_accuracies.append(accuracy)
 
