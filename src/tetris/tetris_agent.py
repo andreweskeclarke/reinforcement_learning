@@ -22,7 +22,7 @@ REWARD_INDEX = 2
 STATE1_INDEX = 3
 
 BUFFER_SIZE = 500000
-DISCOUNT = 0.7
+DISCOUNT = 0.8
 
 class Agent():
     def __init__(self):
@@ -35,8 +35,8 @@ class Agent():
         self.states_t0 = np.zeros((BUFFER_SIZE,1,BOARD_HEIGHT,BOARD_WIDTH), dtype=np.int8)
         self.actions = np.zeros([BUFFER_SIZE], dtype=np.int8)
         self.states_t1 = np.zeros((BUFFER_SIZE,1,BOARD_HEIGHT,BOARD_WIDTH), dtype=np.int8)
-        self.rewards = np.zeros([BUFFER_SIZE], dtype=np.int16)
-        self.interesting_episodes = list()
+        self.rewards = np.zeros([BUFFER_SIZE], dtype=np.float32)
+        self.interesting_episodes = deque([], 100)
         self.current_episode_length = 0
         self.training_runs = 0
         self.recent_q_values = deque([], 10*N_REPLAYS_PER_ROUND)
@@ -49,18 +49,12 @@ class Agent():
         return random.random() < self.epsilon()
 
     def epsilon(self):
-        if self.n_games < 2000:
-            return 0.2
-        elif self.training_runs < 4000:
-            return 0.4
-        elif self.training_runs < 6000:
+        if self.n_games < 5000:
             return 0.6
-        elif self.training_runs < 8000:
-            return 0.8
-        return 0.99
+        else:
+            return 0.95
 
     def choose_action(self, state):
-        state = (state > 0).astype(np.int8)
         if self.exploit():
             vals = self.model.predict(np.array(state, ndmin=4), verbose=0)
             if random.random() < 0.005:
@@ -76,9 +70,6 @@ class Agent():
         return choice
         
     def handle(self, state0, action, reward, state1):
-        # Have inputs vary equally around 0, allows nodes to move in +/- direction.
-        state0 = ((state0 > 0).astype(np.int8) * 2) - 1
-        state1 = ((state1 > 0).astype(np.int8) * 2) - 1
         self.states_t0[self.current_pos] = state0
         self.actions[self.current_pos] = action
         self.rewards[self.current_pos] = reward
@@ -93,9 +84,9 @@ class Agent():
             if self.current_episode_length == 0:
                 indexes = [(self.current_pos - 1) % BUFFER_SIZE]
             else:
-                indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 1 - min(6, self.current_episode_length), -1)]
+                indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 1 - self.current_episode_length, -1)]
             for i, index in enumerate(indexes):
-                self.rewards[index] += reward * (DISCOUNT ** i) # TODO: some rounding issues here...
+                self.rewards[index] += float(reward) * (DISCOUNT ** (i+1))
             if reward > 2:
                 states, y = self.training_data_for_indexes(indexes)
                 self.interesting_episodes.append((np.copy(states), np.copy(y)))
@@ -165,7 +156,7 @@ class Agent():
          self.model.add(Dropout(0.5))
          self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
          optim = SGD(lr=0.01, momentum=0.0, decay=0.0, nesterov=True)
-         self.model.compile(loss='mse', optimizer=optim)
+         self.model.compile(loss='mae', optimizer=optim)
 
 class GreedyAgent(Agent):
     def __init__(self, model_path=None, weights_path=None):

@@ -113,7 +113,7 @@ class Board:
         for x, y, v in self.current_tetronimo.occupied_squares():
             self.current_height = max(self.current_height, y + 1) # 0 based
             if not self.is_out(x, y):
-                self.board_array[y][x] = v
+                self.board_array[y][x] = 1
             if all(self.board_array[y]): 
                 self.__clear_line__(y)
                 n_cleared_rows += 1
@@ -187,8 +187,9 @@ class Tetris:
                     action = self.agent.choose_action(state_t0)
                     MOVES_MAP[action](tetronimo)
                     state_t1 = np.array(board.board_array, copy=True, ndmin=3)
-                    merge_board_and_piece(state_t1, tetronimo)
-                    self.agent.handle(state_t0, action, reward - old_reward, state_t1)
+                    if not np.array_equal(state_t0, state_t1):
+                        merge_board_and_piece(state_t1, tetronimo)
+                        self.agent.handle(state_t0, action, reward - old_reward, state_t1)
                     if action == DO_NOTHING:
                         break
                     if action == MOVE_DOWN:
@@ -217,7 +218,7 @@ class Tetris:
                 avg = (sum(running_scores)/float(len(running_scores)))
                 print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))
 
-                if len(running_scores) >= N_ROLLING_AVG/3:
+                if len(running_scores) >= N_ROLLING_AVG/10:
                     avg_q_value = sum(self.agent.recent_q_values) / float(len(self.agent.recent_q_values))
                     avg_loss = sum(self.agent.recent_losses) / float(len(self.agent.recent_losses))
                     avg_accuracy = sum(self.agent.recent_accuracies) / float(len(self.agent.recent_accuracies))
@@ -255,7 +256,7 @@ def merge_board_and_piece(array, piece):
     if piece is None:
         return
     for x, y, value in piece.occupied_squares():
-        array[0][y][x] = value
+        array[0][y][x] = -1
 
 def tetris_print(array, reward, screen):
     curses.noecho()
