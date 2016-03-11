@@ -216,6 +216,7 @@ class Tetris:
                 print_game_over(board, tetronimo, reward, screen)
             elif len(self.agent.recent_q_values) > 0:
                 avg = (sum(running_scores)/float(len(running_scores)))
+                self.agent.avg_score = avg
                 print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))
 
                 if len(running_scores) >= N_ROLLING_AVG/10:

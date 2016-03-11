@@ -12,6 +12,9 @@ import threading
 import time
 import random
 import math
+import socket
+import sys
+import os
 
 N_REPLAYS_PER_ROUND = 25
 
@@ -23,6 +26,19 @@ STATE1_INDEX = 3
 
 BUFFER_SIZE = 500000
 DISCOUNT = 0.8
+BROADCAST_PORT = 50005
+DESIRED_EPISODE_QUEUE_SIZE = 50
+
+class StatePrinter:
+    def __init__(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind(('', 0))
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    def print(self, state):
+        data = bytes("|".join([",".join(map(str, x)) for x in state[0]]) + "\n", 'ascii')
+        self.sock.sendto(data, ("<broadcast>", BROADCAST_PORT))
 
 class Agent():
     def __init__(self):
@@ -44,13 +60,19 @@ class Agent():
         self.recent_losses = deque([], 5*N_ROLLING_AVG)
         self.last_avg_rewards = 0
         self.n_games = 0
+        self.state_printer = StatePrinter()
+        self.avg_score = 0
 
     def exploit(self):
+        if len(self.interesting_episodes) < DESIRED_EPISODE_QUEUE_SIZE:
+            return False
         return random.random() < self.epsilon()
 
     def epsilon(self):
-        if self.n_games < 5000:
+        if self.avg_score < 0:
             return 0.6
+        elif self.avg_score < 5:
+            return 0.8
         else:
             return 0.95
 
@@ -67,9 +89,13 @@ class Agent():
             self.recent_q_values.append(vals[0][choice])
         else:
             choice = random.choice(POSSIBLE_MOVES)
+            if choice == MOVE_DOWN:
+                choice = random.choice(POSSIBLE_MOVES)
         return choice
         
     def handle(self, state0, action, reward, state1):
+        sys.stdout.flush()
+        self.state_printer.print(state1)
         self.states_t0[self.current_pos] = state0
         self.actions[self.current_pos] = action
         self.rewards[self.current_pos] = reward
@@ -94,8 +120,10 @@ class Agent():
             self.current_episode_length = 0
         else:
             self.current_episode_length += 1
-        self.experience_replay()
-        self.save()
+        if len(self.interesting_episodes) > DESIRED_EPISODE_QUEUE_SIZE:
+            self.experience_replay()
+            self.save()
+        sys.stdout.flush()
 
     def save(self):
         self.save_requests += 1
