@@ -25,16 +25,16 @@ REWARD_INDEX = 2
 STATE1_INDEX = 3
 
 BUFFER_SIZE = 500000 
-DISCOUNT = 0.8
+DISCOUNT = 0.85
 BROADCAST_PORT = 50005
 DESIRED_EPISODE_QUEUE_SIZE = 100
 
 class StatePrinter:
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind(('', 0))
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        self.sock.bind(('', 0))
 
     def print(self, state):
         data = bytes("|".join([",".join(map(str, x)) for x in state[0]]) + "\n", 'ascii')
@@ -64,17 +64,15 @@ class Agent():
         self.avg_score = 0
 
     def exploit(self):
-        if len(self.interesting_episodes) < DESIRED_EPISODE_QUEUE_SIZE:
-            return False
         return random.random() < self.epsilon()
 
     def epsilon(self):
-        if self.n_games < 1000:
+        if self.n_games < 1000 or len(self.interesting_episodes) < DESIRED_EPISODE_QUEUE_SIZE:
             return 0.0
-        elif self.avg_score < 0 and self.n_games < 4000:
-            return 0.6
-        elif self.avg_score < 5 and self.n_games < 8000:
-            return 0.8
+        elif self.avg_score < 0:
+            return 0.7
+        elif self.avg_score < 5:
+            return 0.9
         else:
             return 0.95
 
@@ -91,7 +89,7 @@ class Agent():
             self.recent_q_values.append(vals[0][choice])
         else:
             choice = random.choice(POSSIBLE_MOVES)
-            if choice == MOVE_DOWN:
+            if choice == MOVE_DOWN and len(self.interesting_episodes) < DESIRED_EPISODE_QUEUE_SIZE:
                 choice = random.choice(POSSIBLE_MOVES)
         return choice
         
@@ -141,8 +139,13 @@ class Agent():
         random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
         self.train_on_indexes(random_idxs)
         if len(self.interesting_episodes) > 0 and bool(random.getrandbits(1)) and bool(random.getrandbits(1)):
-            states, y = random.choice(self.interesting_episodes)
-            self.train_on(states, y, False)
+            sample_idxs = np.random.randint(0, len(self.interesting_episodes), N_REPLAYS_PER_ROUND)
+            for s in sample_idxs:
+                episode = self.interesting_episodes[s]
+                i = random.randint(0, len(episode[0]) - 1)
+                states = np.array(episode[0][i], ndmin=4)
+                y = np.array(episode[1][i], ndmin=2)
+                self.train_on(states, y, False)
 
     def train_on_indexes(self, indexes, keep_results=True):
         states, y = self.training_data_for_indexes(indexes)
@@ -168,15 +171,11 @@ class Agent():
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
          self.model = Sequential()
-         self.model.add(Convolution2D(8, 2, 2, 
+         self.model.add(Convolution2D(64, 3, 3, 
                              activation='tanh', 
                              subsample=(1,1),
                              init='uniform',
                              input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
-         self.model.add(Convolution2D(32, 6, 6, 
-                             activation='tanh', 
-                             subsample=(1,1),
-                             init='uniform'))
          self.model.add(Flatten())
          self.model.add(Dropout(0.5))
          self.model.add(Dense(256, activation='tanh', init='uniform'))
@@ -184,7 +183,7 @@ class Agent():
          self.model.add(Dense(256, activation='tanh', init='uniform'))
          self.model.add(Dropout(0.5))
          self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
-         optim = SGD(lr=0.01, momentum=0.0, decay=0.0, nesterov=True)
+         optim = SGD(lr=0.02, momentum=0.0, decay=0.0, nesterov=True)
          self.model.compile(loss='mae', optimizer=optim)
 
 class GreedyAgent(Agent):
