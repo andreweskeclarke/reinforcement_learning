@@ -36,8 +36,8 @@ POSSIBLE_MOVES = np.array([
 #    ROTATE_RIGHT,
     MOVE_RIGHT,
     MOVE_LEFT,
-    MOVE_DOWN ],np.int8)
-#    DO_NOTHING ],np.int8)
+    MOVE_DOWN,
+    DO_NOTHING ],np.int8)
 
 class Tetromino:
     def __init__(self, board, offsets):

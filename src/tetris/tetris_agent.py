@@ -24,7 +24,7 @@ ACTION_INDEX = 1
 REWARD_INDEX = 2
 STATE1_INDEX = 3
 
-BUFFER_SIZE = 500000
+BUFFER_SIZE = 500000 
 DISCOUNT = 0.8
 BROADCAST_PORT = 50005
 DESIRED_EPISODE_QUEUE_SIZE = 100
@@ -69,9 +69,11 @@ class Agent():
         return random.random() < self.epsilon()
 
     def epsilon(self):
-        if self.avg_score < 0:
+        if self.n_games < 1000:
+            return 0.0
+        elif self.avg_score < 0 and self.n_games < 4000:
             return 0.6
-        elif self.avg_score < 5:
+        elif self.avg_score < 5 and self.n_games < 8000:
             return 0.8
         else:
             return 0.95
@@ -82,7 +84,7 @@ class Agent():
             if random.random() < 0.005:
                 print('Some predicted values for a board. Trained against {} examples so far.'.format(self.training_runs))
                 print(np.array(state, ndmin=4))
-                print('[MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN]')
+                print('[MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN, DO_NOTHING]')
                 print(vals)
                 print(np.argmax(vals))
             choice = np.argmax(vals)
@@ -116,7 +118,6 @@ class Agent():
             if reward > 2:
                 states, y = self.training_data_for_indexes(indexes)
                 self.interesting_episodes.append((np.copy(states), np.copy(y)))
-                self.train_on_indexes(indexes, False)
             self.current_episode_length = 0
         else:
             self.current_episode_length += 1
@@ -139,7 +140,7 @@ class Agent():
     def experience_replay(self):
         random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
         self.train_on_indexes(random_idxs)
-        if len(self.interesting_episodes) > 0 and bool(random.getrandbits(1)):
+        if len(self.interesting_episodes) > 0 and bool(random.getrandbits(1)) and bool(random.getrandbits(1)):
             states, y = random.choice(self.interesting_episodes)
             self.train_on(states, y, False)
 
