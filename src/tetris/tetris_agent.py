@@ -27,7 +27,7 @@ STATE1_INDEX = 3
 BUFFER_SIZE = 500000
 DISCOUNT = 0.8
 BROADCAST_PORT = 50005
-DESIRED_EPISODE_QUEUE_SIZE = 50
+DESIRED_EPISODE_QUEUE_SIZE = 100
 
 class StatePrinter:
     def __init__(self):
@@ -52,7 +52,7 @@ class Agent():
         self.actions = np.zeros([BUFFER_SIZE], dtype=np.int8)
         self.states_t1 = np.zeros((BUFFER_SIZE,1,BOARD_HEIGHT,BOARD_WIDTH), dtype=np.int8)
         self.rewards = np.zeros([BUFFER_SIZE], dtype=np.float32)
-        self.interesting_episodes = deque([], 100)
+        self.interesting_episodes = deque([], 2*DESIRED_EPISODE_QUEUE_SIZE)
         self.current_episode_length = 0
         self.training_runs = 0
         self.recent_q_values = deque([], 10*N_REPLAYS_PER_ROUND)
@@ -116,11 +116,11 @@ class Agent():
             if reward > 2:
                 states, y = self.training_data_for_indexes(indexes)
                 self.interesting_episodes.append((np.copy(states), np.copy(y)))
-            self.train_on_indexes(indexes, False)
+                self.train_on_indexes(indexes, False)
             self.current_episode_length = 0
         else:
             self.current_episode_length += 1
-        if len(self.interesting_episodes) > DESIRED_EPISODE_QUEUE_SIZE:
+        if len(self.interesting_episodes) >= DESIRED_EPISODE_QUEUE_SIZE:
             self.experience_replay()
             self.save()
         sys.stdout.flush()
