@@ -26,8 +26,13 @@ path {
 </style>
 <body>
 
+<div id="liveView"></div>
+
 <!-- load the d3.js library -->    
 <script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="//code.jquery.com/jquery-1.12.0.min.js"></script>
+<script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+
 
 <script>
 
@@ -90,6 +95,28 @@ d3.csv("output.csv", function(error, data) {
     }
 
 });
+
+(function() {
+    var ws = new WebSocket('ws://54.153.113.5:8080')
+    var scale = 20;
+    var liveViewSvg = d3.select("#liveView").append("svg")
+                                    .attr("width", 8 * scale)
+                                    .attr("height", 14 * scale);
+    ws.onmessage = function(e){ 
+        liveViewSvg.selectAll("*").remove();
+        $.each(e.data.split("|").reverse(), function(y_index, line) {
+            $.each(line.split(','), function(x_index, square_value) { 
+                liveViewSvg.append("rect")
+                              .attr("x", x_index*scale)
+                              .attr("y", y_index*scale)
+                              .attr("width",scale)
+                              .attr("height",scale)
+                              .attr("stroke","green")
+                              .style("fill", square_value == "1" ? "blue" : (square_value == "-1" ? "red" : "white")) 
+            });
+        });
+    };
+}());
 
 </script>
 </body>
