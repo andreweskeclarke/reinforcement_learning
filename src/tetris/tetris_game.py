@@ -214,15 +214,15 @@ class Tetris:
             self.agent.n_games = n_games
             if screen is not None:
                 print_game_over(board, tetronimo, reward, screen)
-            elif len(self.agent.recent_q_values) > 0:
+            elif n_games > 50:
                 avg = (sum(running_scores)/float(len(running_scores)))
                 self.agent.avg_score = avg
                 print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))
 
                 if len(running_scores) >= N_ROLLING_AVG/10:
-                    avg_q_value = sum(self.agent.recent_q_values) / float(len(self.agent.recent_q_values))
-                    avg_loss = sum(self.agent.recent_losses) / float(len(self.agent.recent_losses))
-                    avg_accuracy = sum(self.agent.recent_accuracies) / float(len(self.agent.recent_accuracies))
+                    avg_q_value = sum(self.agent.recent_q_values) / float(len(self.agent.recent_q_values) + 0.01)
+                    avg_loss = sum(self.agent.recent_losses) / float(len(self.agent.recent_losses) + 0.01)
+                    avg_accuracy = sum(self.agent.recent_accuracies) / float(len(self.agent.recent_accuracies) + 0.01)
                     #print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy')
                     print('output: {}, {}, {}, {}, {}, {}, {}, {}'.format(n_games, avg, avg_q_value, n_cleared, avg_loss, avg_accuracy, self.agent.training_runs, self.agent.epsilon()))
 
