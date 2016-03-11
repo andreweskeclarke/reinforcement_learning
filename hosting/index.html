@@ -27,6 +27,7 @@ path {
 <body>
 
 <div id="liveView"></div>
+<div id="graphs"></div>
 
 <!-- load the d3.js library -->    
 <script src="http://d3js.org/d3.v3.min.js"></script>
@@ -36,65 +37,74 @@ path {
 
 <script>
 
-// Set the dimensions of the canvas / graph
-var margin = {top: 30, right: 20, bottom: 30, left: 50},
-    width = 500 - margin.left - margin.right,
-    height = 2*(220 - margin.top - margin.bottom);
+var drawGraphs = function() {
+    d3.select("#graphs").selectAll("*").remove();
+    $("#graphs").html("");
+    // Set the dimensions of the canvas / graph
+    var margin = {top: 30, right: 20, bottom: 30, left: 50},
+        width = 500 - margin.left - margin.right,
+        height = 2*(220 - margin.top - margin.bottom);
+    
+    // Get the data
+    d3.csv("output.csv", function(error, data) {
+    
+        var fields = ["avg_score", "avg_q_value", "n_lines", "loss", "epsilon"];
+        for(var i = 0; i < fields.length; i++) {
+            var fieldName = fields[i];
+            // Set the ranges
+            var x = d3.scale.linear().range([0, width]);
+            var y = d3.scale.linear().range([height, 0]);
+            
+            // Define the axes
+            var xAxis = d3.svg.axis().scale(x).orient("bottom").ticks(5);
+            var yAxis = d3.svg.axis().scale(y).orient("left").ticks(5);
+    
+            // Scale the range of the data
+            x.domain([0, data.length]);
+            y.domain(d3.extent(data, function(d) { return +d[fieldName]; }));
+    
+            // Define the line
+            var line = d3.svg.line()
+                .x(function(d, i) { return x(+d['n_game']); })
+                .y(function(d, i) { return y(+d[fieldName]); });
+    
+            // SVG
+            var svg = d3.select("#graphs")
+                .append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom)
+                .append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    
+            // Title
+            svg.append("text")
+                    .attr("x", (width / 2))             
+                    .attr("y", 0 - (margin.top / 2))
+                    .attr("text-anchor", "middle")  
+                    .style("font-size", "16px") 
+                    .text(fieldName.toUpperCase());
+    
+            // Add the line path.
+            svg.append("path")
+                .attr("class", "line")
+                .attr("d", line(data));
+    
+            // Add the X Axis
+            svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(xAxis);
+    
+            // Add the Y Axis
+            svg.append("g")
+                .attr("class", "y axis")
+                .call(yAxis);
+        }
+    });
+};
 
-// Get the data
-d3.csv("output.csv", function(error, data) {
+drawGraphs();
 
-    var fields = ["avg_score", "avg_q_value", "n_lines", "loss", "epsilon"];
-    for(var i = 0; i < fields.length; i++) {
-        var fieldName = fields[i];
-        // Set the ranges
-        var x = d3.scale.linear().range([0, width]);
-        var y = d3.scale.linear().range([height, 0]);
-        
-        // Define the axes
-        var xAxis = d3.svg.axis().scale(x).orient("bottom").ticks(5);
-        var yAxis = d3.svg.axis().scale(y).orient("left").ticks(5);
-
-        // Scale the range of the data
-        x.domain([0, data.length]);
-        y.domain(d3.extent(data, function(d) { return +d[fieldName]; }));
-
-        // Define the line
-        var line = d3.svg.line()
-            .x(function(d, i) { return x(+d['n_game']); })
-            .y(function(d, i) { return y(+d[fieldName]); });
-
-        // SVG
-        var svg = d3.select("body")
-            .append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom)
-            .append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-        // Title
-        svg.append("text")
-                .attr("x", (width / 2))             
-                .attr("y", 0 - (margin.top / 2))
-                .attr("text-anchor", "middle")  
-                .style("font-size", "16px") 
-                .text(fieldName.toUpperCase());
-
-        // Add the line path.
-        svg.append("path")
-            .attr("class", "line")
-            .attr("d", line(data));
-
-        // Add the X Axis
-        svg.append("g")
-            .attr("class", "x axis")
-            .attr("transform", "translate(0," + height + ")")
-            .call(xAxis);
-
-        // Add the Y Axis
-        svg.append("g")
-            .attr("class", "y axis")
-            .call(yAxis);
-    }
-
-});
+window.setInterval(function(){
+    drawGraphs();
+}, 10000);
 
 (function() {
     var ws = new WebSocket('ws://54.153.113.5:8080')
