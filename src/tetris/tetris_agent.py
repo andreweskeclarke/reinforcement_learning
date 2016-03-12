@@ -67,10 +67,12 @@ class Agent():
         return random.random() < self.epsilon()
 
     def epsilon(self):
+        if self.n_games > 2000:
+            return 0.95
         if self.n_games < 1000 or len(self.interesting_episodes) < DESIRED_EPISODE_QUEUE_SIZE:
             return 0.0
         elif self.avg_score < 0:
-            return 0.7
+            return 0.8
         elif self.avg_score < 5:
             return 0.9
         else:

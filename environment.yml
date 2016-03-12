@@ -5,20 +5,24 @@ dependencies:
 - boost=1.57.0=4
 - cmake=3.3.1=0
 - cycler=0.9.0=py34_0
-- cython=0.23
+- cython=0.23.4=py34_0
 - docutils=0.12=py34_0
+- fontconfig=2.11.1=5
 - freetype=2.5.5=0
 - h5py=2.5.0=np110py34_4
 - hdf5=1.8.15.1=2
 - icu=54.1=0
 - jinja2=2.8=py34_0
+- libgfortran=1.0=0
 - libpng=1.6.17=0
+- libxml2=2.9.2=0
 - mako=1.0.3=py34_0
 - markupsafe=0.23=py34_0
 - matplotlib=1.5.0=np110py34_0
 - mkl=11.3.1=0
 - nose=1.3.7=py34_0
 - numpy=1.10.4=py34_0
+- openblas=0.2.14=3
 - openssl=1.0.2f=0
 - pip=8.0.2=py34_0
 - pydot-ng=1.0.0.15=py34_0
@@ -44,14 +48,7 @@ dependencies:
 - yaml=0.1.6=0
 - zlib=1.2.8=0
 - pip:
-  - appdirs==1.4.0
-  - decorator==4.0.6
   - keras==0.3.2
-  - py==1.4.31
-  - pycuda==2015.1.3
-  - pygpu==0.2.1
-  - pytest==2.8.5
-  - pytools==2015.1.6
   - pyyaml==3.11
   - sphinx-rtd-theme==0.1.7
   - termcolor==1.1.0
