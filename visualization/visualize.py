@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from keras.models import Sequential, model_from_json
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import *
@@ -11,10 +14,15 @@ import threading
 import time
 import random
 import math
-import matplotlib.pyplot as plt
+import argparse
 
-model = model_from_json(open(max(glob.iglob('model_*.json'), key=os.path.getctime)).read())
-model.load_weights(max(glob.iglob('weights_*.h5'), key=os.path.getctime))
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('path', type=str)
+args = parser.parse_args()
+
+directory = args.path
+model = model_from_json(open(max(glob.iglob(directory + '/model_*.json'), key=os.path.getctime)).read())
+model.load_weights(max(glob.iglob(directory + '/weights_*.h5'), key=os.path.getctime))
 minimum = min([np.amin(a) for a in model.get_weights()])
 
 plt.axis('off')
@@ -24,4 +32,4 @@ for i in range(0,64):
     frame.axes.get_yaxis().set_visible(False)
     plt.pcolor((model.get_weights()[0][i][0] + minimum), cmap=plt.get_cmap('Greys'))
 
-plt.savefig('conv_weights.png')
+plt.savefig(directory + '/conv_weights.png')
