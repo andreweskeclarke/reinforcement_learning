@@ -109,9 +109,11 @@ window.setInterval(function(){
 (function() {
     var ws = new WebSocket('ws://54.153.113.5:8080')
     var scale = 20;
+    var boardW = 10;
+    var boardH = 20;
     var liveViewSvg = d3.select("#liveView").append("svg")
-                                    .attr("width", 8 * scale)
-                                    .attr("height", 14 * scale);
+                                    .attr("width", boardW * scale)
+                                    .attr("height", boardH * scale);
     ws.onmessage = function(e){ 
         liveViewSvg.selectAll("*").remove();
         $.each(e.data.split("|").reverse(), function(y_index, line) {
@@ -129,6 +131,11 @@ window.setInterval(function(){
 }());
 
 </script>
+
+<img src="conv_weights1.png">
+<img src="conv_weights2.png">
+
+
 </body>
 
 </html>
