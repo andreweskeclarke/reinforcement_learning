@@ -192,14 +192,16 @@ class Agent():
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
          self.model = Sequential()
-         self.model.add(Convolution2D(64, 3, 3, 
+         self.model.add(Convolution2D(16, 3, 3, 
                              activation='tanh', 
                              subsample=(1,1),
                              init='uniform',
                              input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+         self.model.add(Convolution2D(64, 5, 6, 
+                             activation='tanh', 
+                             subsample=(1,1),
+                             init='uniform'))
          self.model.add(Flatten())
-         self.model.add(Dropout(0.5))
-         self.model.add(Dense(256, activation='tanh', init='uniform'))
          self.model.add(Dropout(0.5))
          self.model.add(Dense(256, activation='tanh', init='uniform'))
          self.model.add(Dropout(0.5))
