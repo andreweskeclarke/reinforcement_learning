@@ -54,6 +54,7 @@ class Agent():
         self.rewards = np.zeros([BUFFER_SIZE], dtype=np.float32)
         self.interesting_episodes = deque([], 2*DESIRED_EPISODE_QUEUE_SIZE)
         self.current_episode_length = 0
+        self.current_game_length = 0
         self.training_runs = 0
         self.recent_q_values = deque([], 10*N_REPLAYS_PER_ROUND)
         self.recent_accuracies = deque([], 5*N_ROLLING_AVG)
@@ -66,14 +67,17 @@ class Agent():
     def exploit(self):
         return random.random() < self.epsilon()
 
+    def warming_up(self):
+        return len(self.interesting_episodes) < DESIRED_EPISODE_QUEUE_SIZE
+
     def epsilon(self):
-        if self.n_games > 2000:
-            return 0.95
-        if self.n_games < 1000 or len(self.interesting_episodes) < DESIRED_EPISODE_QUEUE_SIZE:
+        if self.warming_up():
             return 0.0
-        elif self.avg_score < 0:
+        elif self.avg_score < 10:
+            return 0.7
+        elif self.avg_score < 20:
             return 0.8
-        elif self.avg_score < 5:
+        elif self.avg_score < 40:
             return 0.9
         else:
             return 0.95
@@ -91,37 +95,52 @@ class Agent():
             self.recent_q_values.append(vals[0][choice])
         else:
             choice = random.choice(POSSIBLE_MOVES)
-            if choice == MOVE_DOWN and len(self.interesting_episodes) < DESIRED_EPISODE_QUEUE_SIZE:
+            if choice == MOVE_DOWN and self.warming_up():
                 choice = random.choice(POSSIBLE_MOVES)
         return choice
         
+    def last_n_indexes(self, n):
+        if n == 0:
+            indexes = [(self.current_pos - 1) % BUFFER_SIZE]
+        else:
+            indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 1 - n, -1)]
+        return indexes
+
+    def backup_episode(self, reward):
+        indexes = self.last_n_indexes(self.current_episode_length)
+        for i, index in enumerate(indexes):
+            self.rewards[index] += float(reward) * (DISCOUNT ** (i+1))
+        self.current_episode_length = 0
+        return indexes
+
+    def tick_forward(self):
+        self.current_pos = (self.current_pos + 1) % BUFFER_SIZE
+        self.n_plays += 1
+        self.current_game_length += 1
+        self.max_pos = min(self.max_pos + 1, BUFFER_SIZE)
+        self.current_episode_length += 1
+        if self.current_pos == 0: # Rolled over on indexes
+            self.last_avg_rewards = sum(self.rewards) / len(self.rewards)
+
+    def game_over(self, total_reward):
+        indexes = self.last_n_indexes(self.current_game_length)
+        for i, index in enumerate(indexes):
+            self.rewards[index] += float(total_reward) * 0.05
+        self.current_game_length = 0
+
     def handle(self, state0, action, reward, state1):
-        sys.stdout.flush()
-        self.state_printer.print(state1)
         self.states_t0[self.current_pos] = state0
         self.actions[self.current_pos] = action
         self.rewards[self.current_pos] = reward
         self.states_t1[self.current_pos] = state1
-        self.current_pos = (self.current_pos + 1) % BUFFER_SIZE
-        self.n_plays += 1
-        self.max_pos = min(self.max_pos + 1, BUFFER_SIZE)
-        if self.current_pos == 0: # Rolled over on indexes
-            self.last_avg_rewards = sum(self.rewards) / len(self.rewards)
-        if reward !=0:
-            # Backups
-            if self.current_episode_length == 0:
-                indexes = [(self.current_pos - 1) % BUFFER_SIZE]
-            else:
-                indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 1 - self.current_episode_length, -1)]
-            for i, index in enumerate(indexes):
-                self.rewards[index] += float(reward) * (DISCOUNT ** (i+1))
+        self.tick_forward()
+        if reward is not 0:
+            indexes = self.backup_episode(reward)
             if reward > 2:
                 states, y = self.training_data_for_indexes(indexes)
                 self.interesting_episodes.append((np.copy(states), np.copy(y)))
-            self.current_episode_length = 0
-        else:
-            self.current_episode_length += 1
-        if len(self.interesting_episodes) >= DESIRED_EPISODE_QUEUE_SIZE:
+        if not self.warming_up():
+            self.state_printer.print(state1)
             self.experience_replay()
             self.save()
         sys.stdout.flush()
@@ -140,7 +159,7 @@ class Agent():
     def experience_replay(self):
         random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
         self.train_on_indexes(random_idxs)
-        if len(self.interesting_episodes) > 0 and bool(random.getrandbits(1)) and bool(random.getrandbits(1)):
+        if bool(random.getrandbits(1)) and bool(random.getrandbits(1)):
             sample_idxs = np.random.randint(0, len(self.interesting_episodes), N_REPLAYS_PER_ROUND)
             for s in sample_idxs:
                 episode = self.interesting_episodes[s]

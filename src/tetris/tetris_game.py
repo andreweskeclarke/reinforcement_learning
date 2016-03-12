@@ -21,8 +21,8 @@ MOVE_LEFT = 3
 MOVE_DOWN = 4
 DO_NOTHING = 5
 
-BOARD_HEIGHT = 14
-BOARD_WIDTH = 8
+BOARD_HEIGHT = 20
+BOARD_WIDTH = 10
 
 MOVES_MAP = [ lambda x:x.rotate_left(),
               lambda x:x.rotate_right(),
@@ -168,7 +168,6 @@ class Tetris:
         n_games = 0
         print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy, training_runs, epsilon')
         while True:
-            n_games += 1
             board = Board()
             play_on = True
             tetronimo = self.generate_tetronimo(board)
@@ -212,14 +211,16 @@ class Tetris:
 
             running_scores.append(reward)
             self.agent.n_games = n_games
+            self.agent.game_over(reward)
             if screen is not None:
                 print_game_over(board, tetronimo, reward, screen)
-            elif n_games > 50:
+            else:
                 avg = (sum(running_scores)/float(len(running_scores)))
                 self.agent.avg_score = avg
-                print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games))
+                print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {}, n interesting episodes: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games, len(self.agent.interesting_episodes)))
 
-                if len(running_scores) >= N_ROLLING_AVG/10:
+                if not self.agent.warming_up():
+                    n_games += 1
                     avg_q_value = sum(self.agent.recent_q_values) / float(len(self.agent.recent_q_values) + 0.01)
                     avg_loss = sum(self.agent.recent_losses) / float(len(self.agent.recent_losses) + 0.01)
                     avg_accuracy = sum(self.agent.recent_accuracies) / float(len(self.agent.recent_accuracies) + 0.01)
