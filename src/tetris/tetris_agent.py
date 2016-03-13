@@ -73,8 +73,6 @@ class Agent():
     def epsilon(self):
         if self.warming_up():
             return 0.0
-        elif self.avg_score < 5:
-            return 0.6
         elif self.avg_score < 10:
             return 0.8
         elif self.avg_score < 40:
@@ -147,7 +145,7 @@ class Agent():
 
     def save(self):
         self.save_requests += 1
-        if self.save_requests == 100000:
+        if self.save_requests == 10000:
             self.save_requests = 0
             name = time.strftime("%m-%dT%H%M%S%Z")
             model_file = 'output/model_{}.json'.format(name)
@@ -192,7 +190,7 @@ class Agent():
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
          self.model = Sequential()
-         self.model.add(Convolution2D(64, 5, 6, 
+         self.model.add(Convolution2D(64, 5, 5, 
                              activation='tanh', 
                              subsample=(1,1),
                              init='uniform',
@@ -201,9 +199,11 @@ class Agent():
          self.model.add(Dropout(0.5))
          self.model.add(Dense(128, activation='tanh', init='uniform'))
          self.model.add(Dropout(0.5))
+         self.model.add(Dense(128, activation='tanh', init='uniform'))
+         self.model.add(Dropout(0.5))
          self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
          optim = SGD(lr=0.02, momentum=0.0, decay=0.0, nesterov=True)
-         self.model.compile(loss='mae', optimizer=optim)
+         self.model.compile(loss='mse', optimizer=optim)
 
 class GreedyAgent(Agent):
     def __init__(self, model_path=None, weights_path=None):
