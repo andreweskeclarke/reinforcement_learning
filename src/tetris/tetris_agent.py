@@ -16,7 +16,7 @@ import socket
 import sys
 import os
 
-N_REPLAYS_PER_ROUND = 25
+N_REPLAYS_PER_ROUND = 15
 
 # SARS - [State_0, Action, Reward, State_1]
 STATE0_INDEX = 0
@@ -27,7 +27,7 @@ STATE1_INDEX = 3
 BUFFER_SIZE = 500000 
 DISCOUNT = 0.85
 BROADCAST_PORT = 50005
-DESIRED_EPISODE_QUEUE_SIZE = 100
+DESIRED_EPISODE_QUEUE_SIZE = 150
 
 class StatePrinter:
     def __init__(self):
@@ -73,9 +73,9 @@ class Agent():
     def epsilon(self):
         if self.warming_up():
             return 0.0
+        elif self.avg_score < 5:
+            return 0.6
         elif self.avg_score < 10:
-            return 0.7
-        elif self.avg_score < 20:
             return 0.8
         elif self.avg_score < 40:
             return 0.9
@@ -160,7 +160,7 @@ class Agent():
         random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
         self.train_on_indexes(random_idxs)
         if bool(random.getrandbits(1)) and bool(random.getrandbits(1)):
-            sample_idxs = np.random.randint(0, len(self.interesting_episodes), N_REPLAYS_PER_ROUND)
+            sample_idxs = np.random.randint(0, len(self.interesting_episodes), 2)
             for s in sample_idxs:
                 episode = self.interesting_episodes[s]
                 i = random.randint(0, len(episode[0]) - 1)
@@ -192,18 +192,14 @@ class Agent():
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
          self.model = Sequential()
-         self.model.add(Convolution2D(16, 3, 3, 
+         self.model.add(Convolution2D(64, 5, 6, 
                              activation='tanh', 
                              subsample=(1,1),
                              init='uniform',
                              input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
-         self.model.add(Convolution2D(64, 5, 6, 
-                             activation='tanh', 
-                             subsample=(1,1),
-                             init='uniform'))
          self.model.add(Flatten())
          self.model.add(Dropout(0.5))
-         self.model.add(Dense(256, activation='tanh', init='uniform'))
+         self.model.add(Dense(128, activation='tanh', init='uniform'))
          self.model.add(Dropout(0.5))
          self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
          optim = SGD(lr=0.02, momentum=0.0, decay=0.0, nesterov=True)

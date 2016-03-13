@@ -32,4 +32,5 @@ for i in range(0,64):
     frame.axes.get_yaxis().set_visible(False)
     plt.pcolor((model.get_weights()[0][i][0] + minimum), cmap=plt.get_cmap('Greys'))
 
+plt.tight_layout()
 plt.savefig(directory + '/conv_weights.png')
