@@ -96,7 +96,7 @@ class Board:
     def __init__(self, width=BOARD_WIDTH, height=BOARD_HEIGHT):
         self.height = height
         self.width = width
-        self.starting_x = math.floor(width / 2)
+        self.starting_x = math.floor(width / 2) - 1
         self.starting_y = height - 2
         self.board_array = np.array([[0 for x in range(0, self.width)] for y in range(0, self.height)], np.int8)
         self.current_tetronimo = None

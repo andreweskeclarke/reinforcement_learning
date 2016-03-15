@@ -16,7 +16,7 @@ import socket
 import sys
 import os
 
-N_REPLAYS_PER_ROUND = 15
+N_REPLAYS_PER_ROUND = 10
 
 # SARS - [State_0, Action, Reward, State_1]
 STATE0_INDEX = 0
@@ -26,8 +26,8 @@ STATE1_INDEX = 3
 
 BUFFER_SIZE = 500000 
 DISCOUNT = 0.85
-BROADCAST_PORT = 50005
-DESIRED_EPISODE_QUEUE_SIZE = 150
+BROADCAST_PORT = 50006
+DESIRED_EPISODE_QUEUE_SIZE = 500
 
 class StatePrinter:
     def __init__(self):
@@ -63,12 +63,33 @@ class Agent():
         self.n_games = 0
         self.state_printer = StatePrinter()
         self.avg_score = 0
+        self.warmed_up_net = False
 
     def exploit(self):
         return random.random() < self.epsilon()
 
     def warming_up(self):
-        return len(self.interesting_episodes) < DESIRED_EPISODE_QUEUE_SIZE
+        still_warming = len(self.interesting_episodes) < DESIRED_EPISODE_QUEUE_SIZE
+        if still_warming:
+            return True
+        if not self.warmed_up_net:
+            for i in range(0,15):
+                print('Train a batch...')
+                sys.stdout.flush()
+                start = time.time()
+                random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE) - 1, 10000)
+                self.train_on_indexes(random_idxs)
+                print('\trandoms in {}'.format(time.time() - start))
+                sys.stdout.flush()
+                for i, episode in enumerate(self.interesting_episodes):
+                    print('\t\t{} in {}'.format(i, time.time() - start))
+                    sys.stdout.flush()
+                    self.train_on(episode[0], episode[1], False)
+                print('\tinteresting examples in {}'.format(time.time() - start))
+                sys.stdout.flush()
+
+            self.warmed_up_net = True 
+        return False
 
     def epsilon(self):
         if self.warming_up():
@@ -123,7 +144,7 @@ class Agent():
     def game_over(self, total_reward):
         indexes = self.last_n_indexes(self.current_game_length)
         for i, index in enumerate(indexes):
-            self.rewards[index] += float(total_reward) * 0.05
+            self.rewards[index] += float(total_reward) * 0.2
         self.current_game_length = 0
 
     def handle(self, state0, action, reward, state1):
@@ -155,16 +176,15 @@ class Agent():
             print('Saved: {} and {}'.format(model_file, weights_file))
 
     def experience_replay(self):
-        random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE), N_REPLAYS_PER_ROUND)
+        random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE) - 1, N_REPLAYS_PER_ROUND)
         self.train_on_indexes(random_idxs)
-        if bool(random.getrandbits(1)) and bool(random.getrandbits(1)):
-            sample_idxs = np.random.randint(0, len(self.interesting_episodes), 2)
-            for s in sample_idxs:
-                episode = self.interesting_episodes[s]
-                i = random.randint(0, len(episode[0]) - 1)
-                states = np.array(episode[0][i], ndmin=4)
-                y = np.array(episode[1][i], ndmin=2)
-                self.train_on(states, y, False)
+        sample_idxs = np.random.randint(0, len(self.interesting_episodes) - 1, N_REPLAYS_PER_ROUND)
+        for s in sample_idxs:
+            episode = self.interesting_episodes[s]
+            i = random.randint(0, len(episode[0]) - 1)
+            states = np.array(episode[0][i], ndmin=4)
+            y = np.array(episode[1][i], ndmin=2)
+            self.train_on(states, y, False)
 
     def train_on_indexes(self, indexes, keep_results=True):
         states, y = self.training_data_for_indexes(indexes)
@@ -190,20 +210,18 @@ class Agent():
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
          self.model = Sequential()
-         self.model.add(Convolution2D(64, 5, 5, 
+         self.model.add(Convolution2D(16, 5, 5, 
                              activation='tanh', 
                              subsample=(1,1),
                              init='uniform',
                              input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
          self.model.add(Flatten())
          self.model.add(Dropout(0.5))
-         self.model.add(Dense(128, activation='tanh', init='uniform'))
-         self.model.add(Dropout(0.5))
-         self.model.add(Dense(128, activation='tanh', init='uniform'))
+         self.model.add(Dense(64, activation='tanh', init='uniform'))
          self.model.add(Dropout(0.5))
          self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
-         optim = SGD(lr=0.02, momentum=0.0, decay=0.0, nesterov=True)
-         self.model.compile(loss='mse', optimizer=optim)
+         optim = SGD(lr=0.1, decay=0.0, momentum=0.5, nesterov=True)
+         self.model.compile(loss='mae', optimizer=optim)
 
 class GreedyAgent(Agent):
     def __init__(self, model_path=None, weights_path=None):
