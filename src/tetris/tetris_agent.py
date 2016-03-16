@@ -16,7 +16,7 @@ import socket
 import sys
 import os
 
-N_REPLAYS_PER_ROUND = 10
+N_REPLAYS_PER_ROUND = 5000
 
 # SARS - [State_0, Action, Reward, State_1]
 STATE0_INDEX = 0
@@ -69,53 +69,39 @@ class Agent():
         return random.random() < self.epsilon()
 
     def warming_up(self):
-        still_warming = len(self.interesting_episodes) < DESIRED_EPISODE_QUEUE_SIZE
-        if still_warming:
-            return True
-        if not self.warmed_up_net:
-            for i in range(0,15):
-                print('Train a batch...')
-                sys.stdout.flush()
-                start = time.time()
-                random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE) - 1, 10000)
-                self.train_on_indexes(random_idxs)
-                print('\trandoms in {}'.format(time.time() - start))
-                sys.stdout.flush()
-                for i, episode in enumerate(self.interesting_episodes):
-                    print('\t\t{} in {}'.format(i, time.time() - start))
-                    sys.stdout.flush()
-                    self.train_on(episode[0], episode[1], False)
-                print('\tinteresting examples in {}'.format(time.time() - start))
-                sys.stdout.flush()
-
-            self.warmed_up_net = True 
         return False
 
     def epsilon(self):
-        if self.warming_up():
+        n_warmups = 100
+        n_settle = 1500
+        final_e = 0.9
+        if self.n_games < n_warmups: # Start with random games
             return 0.0
-        elif self.avg_score < 10:
-            return 0.8
-        elif self.avg_score < 40:
-            return 0.9
+        elif self.n_games < n_settle: # Anneal to .9
+            return (0.0 + (self.n_games - n_warmups) / n_settle) * final_e
         else:
-            return 0.95
+            return final_e
+
+    def __log_choice__(self, state, vals):
+        if random.random() < 0.003:
+            print('Some predicted values for a board. Trained against {} examples so far.'.format(self.training_runs))
+            print(np.array(state, ndmin=4))
+            print('[MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN, DO_NOTHING]')
+            print(vals)
+            print(np.argmax(vals))
 
     def choose_action(self, state):
         if self.exploit():
             vals = self.model.predict(np.array(state, ndmin=4), verbose=0)
-            if random.random() < 0.005:
-                print('Some predicted values for a board. Trained against {} examples so far.'.format(self.training_runs))
-                print(np.array(state, ndmin=4))
-                print('[MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN, DO_NOTHING]')
-                print(vals)
-                print(np.argmax(vals))
+            self.__log_choice__(state, vals)
             choice = np.argmax(vals)
             self.recent_q_values.append(vals[0][choice])
         else:
             choice = random.choice(POSSIBLE_MOVES)
-            if choice == MOVE_DOWN and self.warming_up():
+            if choice == MOVE_DOWN:
                 choice = random.choice(POSSIBLE_MOVES)
+                if choice == MOVE_DOWN:
+                    choice = random.choice(POSSIBLE_MOVES)
         return choice
         
     def last_n_indexes(self, n):
@@ -144,7 +130,9 @@ class Agent():
     def game_over(self, total_reward):
         indexes = self.last_n_indexes(self.current_game_length)
         for i, index in enumerate(indexes):
-            self.rewards[index] += float(total_reward) * 0.2
+            self.rewards[index] += float(total_reward) * 0.5
+        self.experience_replay()
+        self.save()
         self.current_game_length = 0
 
     def handle(self, state0, action, reward, state1):
@@ -155,18 +143,12 @@ class Agent():
         self.tick_forward()
         if reward is not 0:
             indexes = self.backup_episode(reward)
-            if reward > 2:
-                states, y = self.training_data_for_indexes(indexes)
-                self.interesting_episodes.append((np.copy(states), np.copy(y)))
-        if not self.warming_up():
-            self.state_printer.print(state1)
-            self.experience_replay()
-            self.save()
+        self.state_printer.print(state1)
         sys.stdout.flush()
 
     def save(self):
         self.save_requests += 1
-        if self.save_requests == 10000:
+        if self.save_requests == 100:
             self.save_requests = 0
             name = time.strftime("%m-%dT%H%M%S%Z")
             model_file = 'output/model_{}.json'.format(name)
@@ -178,13 +160,6 @@ class Agent():
     def experience_replay(self):
         random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE) - 1, N_REPLAYS_PER_ROUND)
         self.train_on_indexes(random_idxs)
-        sample_idxs = np.random.randint(0, len(self.interesting_episodes) - 1, N_REPLAYS_PER_ROUND)
-        for s in sample_idxs:
-            episode = self.interesting_episodes[s]
-            i = random.randint(0, len(episode[0]) - 1)
-            states = np.array(episode[0][i], ndmin=4)
-            y = np.array(episode[1][i], ndmin=2)
-            self.train_on(states, y, False)
 
     def train_on_indexes(self, indexes, keep_results=True):
         states, y = self.training_data_for_indexes(indexes)
@@ -209,19 +184,20 @@ class Agent():
     def init_model(self):
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
-         self.model = Sequential()
-         self.model.add(Convolution2D(16, 5, 5, 
-                             activation='tanh', 
-                             subsample=(1,1),
-                             init='uniform',
-                             input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
-         self.model.add(Flatten())
-         self.model.add(Dropout(0.5))
-         self.model.add(Dense(64, activation='tanh', init='uniform'))
-         self.model.add(Dropout(0.5))
-         self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
-         optim = SGD(lr=0.1, decay=0.0, momentum=0.5, nesterov=True)
-         self.model.compile(loss='mae', optimizer=optim)
+        self.model = Sequential()
+        self.model.add(Convolution2D(32, 4, 4,
+                                              activation='tanh',
+                                              subsample=(1,1),
+                                              init='uniform',
+                                              input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+        self.model.add(Flatten())
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(256, activation='tanh', init='uniform'))
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
+        optim = SGD(lr=0.1, decay=0.0, momentum=0.5, nesterov=True)
+        self.model.compile(loss='mae', optimizer=optim)
+
 
 class GreedyAgent(Agent):
     def __init__(self, model_path=None, weights_path=None):

@@ -211,13 +211,14 @@ class Tetris:
 
             running_scores.append(reward)
             self.agent.n_games = n_games
+            game_size = self.agent.current_game_length
             self.agent.game_over(reward)
             if screen is not None:
                 print_game_over(board, tetronimo, reward, screen)
             else:
                 avg = (sum(running_scores)/float(len(running_scores)))
                 self.agent.avg_score = avg
-                print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {}, n interesting episodes: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games, len(self.agent.interesting_episodes)))
+                print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {}, n interesting episodes: {}, game size: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games, len(self.agent.interesting_episodes), game_size))
 
                 if not self.agent.warming_up():
                     n_games += 1
