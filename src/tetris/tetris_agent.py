@@ -25,8 +25,8 @@ REWARD_INDEX = 2
 STATE1_INDEX = 3
 
 BUFFER_SIZE = 100000 
-DISCOUNT = 0.85
-BROADCAST_PORT = 50005
+DISCOUNT = 0.5
+BROADCAST_PORT = 50006
 DESIRED_EPISODE_QUEUE_SIZE = 500
 
 class StatePrinter:
@@ -98,6 +98,10 @@ class Agent():
             self.recent_q_values.append(vals[0][choice])
         else:
             choice = random.choice(POSSIBLE_MOVES)
+            if choice == MOVE_DOWN and bool(random.getrandbits(1)):
+                choice = random.choice(POSSIBLE_MOVES)
+                if choice == MOVE_DOWN and bool(random.getrandbits(1)):
+                    choice = random.choice(POSSIBLE_MOVES)
         return choice
         
     def last_n_indexes(self, n):
@@ -119,7 +123,7 @@ class Agent():
     def game_over(self, total_reward):
         indexes = self.last_n_indexes(self.current_game_length)
         for i, index in enumerate(indexes):
-            self.rewards[index] += float(total_reward) * 0.3
+            self.rewards[index] += float(total_reward) * 0.1
         self.experience_replay()
         self.save()
         self.current_game_length = 0
