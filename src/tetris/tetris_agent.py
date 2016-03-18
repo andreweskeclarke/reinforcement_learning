@@ -24,9 +24,9 @@ ACTION_INDEX = 1
 REWARD_INDEX = 2
 STATE1_INDEX = 3
 
-BUFFER_SIZE = 500000 
+BUFFER_SIZE = 100000 
 DISCOUNT = 0.85
-BROADCAST_PORT = 50006
+BROADCAST_PORT = 50005
 DESIRED_EPISODE_QUEUE_SIZE = 500
 
 class StatePrinter:
@@ -73,12 +73,12 @@ class Agent():
 
     def epsilon(self):
         n_warmups = 100
-        n_settle = 1500
+        n_settle = 500
         final_e = 0.9
         if self.n_games < n_warmups: # Start with random games
             return 0.0
         elif self.n_games < n_settle: # Anneal to .9
-            return (0.0 + (self.n_games - n_warmups) / n_settle) * final_e
+            return (0.0 + (self.n_games - n_warmups) / (n_settle - n_warmups)) * final_e
         else:
             return final_e
 
@@ -98,10 +98,6 @@ class Agent():
             self.recent_q_values.append(vals[0][choice])
         else:
             choice = random.choice(POSSIBLE_MOVES)
-            if choice == MOVE_DOWN:
-                choice = random.choice(POSSIBLE_MOVES)
-                if choice == MOVE_DOWN:
-                    choice = random.choice(POSSIBLE_MOVES)
         return choice
         
     def last_n_indexes(self, n):
@@ -109,13 +105,6 @@ class Agent():
             indexes = [(self.current_pos - 1) % BUFFER_SIZE]
         else:
             indexes = [x % BUFFER_SIZE for x in range(self.current_pos - 1, self.current_pos - 1 - n, -1)]
-        return indexes
-
-    def backup_episode(self, reward):
-        indexes = self.last_n_indexes(self.current_episode_length)
-        for i, index in enumerate(indexes):
-            self.rewards[index] += float(reward) * (DISCOUNT ** (i+1))
-        self.current_episode_length = 0
         return indexes
 
     def tick_forward(self):
@@ -130,10 +119,15 @@ class Agent():
     def game_over(self, total_reward):
         indexes = self.last_n_indexes(self.current_game_length)
         for i, index in enumerate(indexes):
-            self.rewards[index] += float(total_reward) * 0.5
+            self.rewards[index] += float(total_reward) * 0.3
         self.experience_replay()
         self.save()
         self.current_game_length = 0
+
+    def backup_episode(self, reward):
+        indexes = self.last_n_indexes(self.current_game_length)
+        for i, index in enumerate(indexes):
+            self.rewards[index] += float(reward) * (DISCOUNT ** (i+1))
 
     def handle(self, state0, action, reward, state1):
         self.states_t0[self.current_pos] = state0
@@ -142,7 +136,8 @@ class Agent():
         self.states_t1[self.current_pos] = state1
         self.tick_forward()
         if reward is not 0:
-            indexes = self.backup_episode(reward)
+            self.backup_episode(reward)
+            self.current_episode_length = 0
         self.state_printer.print(state1)
         sys.stdout.flush()
 
@@ -159,11 +154,8 @@ class Agent():
 
     def experience_replay(self):
         random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE) - 1, N_REPLAYS_PER_ROUND)
-        self.train_on_indexes(random_idxs)
-
-    def train_on_indexes(self, indexes, keep_results=True):
-        states, y = self.training_data_for_indexes(indexes)
-        self.train_on(self.states_t0[indexes], y, keep_results)
+        states, y = self.training_data_for_indexes(random_idxs)
+        self.train_on(self.states_t0[random_idxs], y, True)
 
     def training_data_for_indexes(self, indexes):
         y = self.model.predict(self.states_t0[indexes], verbose=0)
@@ -190,12 +182,16 @@ class Agent():
                                               subsample=(1,1),
                                               init='uniform',
                                               input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+        self.model.add(Convolution2D(32, 4, 4,
+                                              activation='tanh',
+                                              subsample=(1,1),
+                                              init='uniform'))
         self.model.add(Flatten())
         self.model.add(Dropout(0.5))
         self.model.add(Dense(256, activation='tanh', init='uniform'))
         self.model.add(Dropout(0.5))
         self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
-        optim = SGD(lr=0.1, decay=0.0, momentum=0.5, nesterov=True)
+        optim = SGD(lr=0.1, decay=1e-7, momentum=0.5, nesterov=True)
         self.model.compile(loss='mae', optimizer=optim)
 
 
