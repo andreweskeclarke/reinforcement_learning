@@ -16,7 +16,7 @@ import socket
 import sys
 import os
 
-N_REPLAYS_PER_ROUND = 5000
+N_REPLAYS_PER_ROUND = 2500
 
 # SARS - [State_0, Action, Reward, State_1]
 STATE0_INDEX = 0
@@ -24,9 +24,9 @@ ACTION_INDEX = 1
 REWARD_INDEX = 2
 STATE1_INDEX = 3
 
-BUFFER_SIZE = 100000 
-DISCOUNT = 0.5
-BROADCAST_PORT = 50006
+BUFFER_SIZE = 50000 
+DISCOUNT = 0.75
+BROADCAST_PORT = 50005
 DESIRED_EPISODE_QUEUE_SIZE = 500
 
 class StatePrinter:
@@ -72,8 +72,8 @@ class Agent():
         return False
 
     def epsilon(self):
-        n_warmups = 100
-        n_settle = 500
+        n_warmups = 50
+        n_settle = 400
         final_e = 0.9
         if self.n_games < n_warmups: # Start with random games
             return 0.0
@@ -121,6 +121,7 @@ class Agent():
             self.last_avg_rewards = sum(self.rewards) / len(self.rewards)
 
     def game_over(self, total_reward):
+        self.state_printer.print(self.states_t1[self.current_pos - 1])
         indexes = self.last_n_indexes(self.current_game_length)
         for i, index in enumerate(indexes):
             self.rewards[index] += float(total_reward) * 0.1
@@ -131,7 +132,7 @@ class Agent():
     def backup_episode(self, reward):
         indexes = self.last_n_indexes(self.current_game_length)
         for i, index in enumerate(indexes):
-            self.rewards[index] += float(reward) * (DISCOUNT ** (i+1))
+            self.rewards[index] += float(reward) * (DISCOUNT ** (3*i+1))
 
     def handle(self, state0, action, reward, state1):
         self.states_t0[self.current_pos] = state0
@@ -142,7 +143,6 @@ class Agent():
         if reward is not 0:
             self.backup_episode(reward)
             self.current_episode_length = 0
-        self.state_printer.print(state1)
         sys.stdout.flush()
 
     def save(self):

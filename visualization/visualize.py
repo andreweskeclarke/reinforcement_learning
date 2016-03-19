@@ -26,8 +26,8 @@ model.load_weights(max(glob.iglob(directory + '/weights_*.h5'), key=os.path.getc
 minimum = min([np.amin(a) for a in model.get_weights()])
 
 plt.axis('off')
-for i in range(0,64):
-    frame = plt.subplot(8,8,i+1)
+for i in range(0,32):
+    frame = plt.subplot(8,4,i+1)
     frame.axes.get_xaxis().set_visible(False)
     frame.axes.get_yaxis().set_visible(False)
     plt.pcolor((model.get_weights()[0][i][0] + minimum), cmap=plt.get_cmap('Greys'))
