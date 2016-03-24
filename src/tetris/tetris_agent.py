@@ -16,7 +16,7 @@ import socket
 import sys
 import os
 
-N_REPLAYS_PER_ROUND = 2500
+N_REPLAYS_PER_ROUND = 1250
 
 # SARS - [State_0, Action, Reward, State_1]
 STATE0_INDEX = 0
@@ -24,10 +24,10 @@ ACTION_INDEX = 1
 REWARD_INDEX = 2
 STATE1_INDEX = 3
 
-BUFFER_SIZE = 50000 
+BUFFER_SIZE = 10000 
 DISCOUNT = 0.75
 BROADCAST_PORT = 50005
-DESIRED_EPISODE_QUEUE_SIZE = 500
+DESIRED_GAME_QUEUE_SIZE = 10
 
 class StatePrinter:
     def __init__(self):
@@ -52,7 +52,7 @@ class Agent():
         self.actions = np.zeros([BUFFER_SIZE], dtype=np.int8)
         self.states_t1 = np.zeros((BUFFER_SIZE,1,BOARD_HEIGHT,BOARD_WIDTH), dtype=np.int8)
         self.rewards = np.zeros([BUFFER_SIZE], dtype=np.float32)
-        self.interesting_episodes = deque([], 2*DESIRED_EPISODE_QUEUE_SIZE)
+        self.interesting_games = deque([], 2*DESIRED_GAME_QUEUE_SIZE)
         self.current_episode_length = 0
         self.current_game_length = 0
         self.training_runs = 0
@@ -63,24 +63,27 @@ class Agent():
         self.n_games = 0
         self.state_printer = StatePrinter()
         self.avg_score = 0
-        self.warmed_up_net = False
+        self.n_warmups = 0
 
     def exploit(self):
         return random.random() < self.epsilon()
 
     def warming_up(self):
-        return False
+        return len(self.interesting_games) < DESIRED_GAME_QUEUE_SIZE
 
     def epsilon(self):
-        n_warmups = 50
-        n_settle = 400
+        n_settle = 500
+        start_e = 0.6
         final_e = 0.9
-        if self.n_games < n_warmups: # Start with random games
+        if self.warming_up(): # Start with random games
             return 0.0
-        elif self.n_games < n_settle: # Anneal to .9
-            return (0.0 + (self.n_games - n_warmups) / (n_settle - n_warmups)) * final_e
-        else:
-            return final_e
+        elif self.n_warmups == 0:
+            self.n_warmups = self.n_games
+
+        if self.n_games < n_settle + self.n_warmups: # Anneal to .9
+            return (start_e + (self.n_games - self.n_warmups) / n_settle) * final_e
+
+        return final_e
 
     def __log_choice__(self, state, vals):
         if random.random() < 0.003:
@@ -120,19 +123,32 @@ class Agent():
         if self.current_pos == 0: # Rolled over on indexes
             self.last_avg_rewards = sum(self.rewards) / len(self.rewards)
 
+    def keep_game(self, total_reward):
+        if len(self.interesting_games) >= DESIRED_GAME_QUEUE_SIZE:
+            return total_reward >= sum([g[0] for g in self.interesting_games])/len(self.interesting_games)
+
+        return total_reward >= 10
+
     def game_over(self, total_reward):
         self.state_printer.print(self.states_t1[self.current_pos - 1])
         indexes = self.last_n_indexes(self.current_game_length)
         for i, index in enumerate(indexes):
-            self.rewards[index] += float(total_reward) * 0.1
+            self.rewards[index] += float(total_reward) * 0.25
+        
+        if self.keep_game(total_reward):
+            states, y = self.training_data_for_indexes(indexes)
+            game_info = (total_reward, states, y)
+            self.interesting_games.append(game_info)
+
         self.experience_replay()
         self.save()
         self.current_game_length = 0
 
     def backup_episode(self, reward):
-        indexes = self.last_n_indexes(self.current_game_length)
+        indexes = self.last_n_indexes(self.current_episode_length)
         for i, index in enumerate(indexes):
-            self.rewards[index] += float(reward) * (DISCOUNT ** (3*i+1))
+            self.rewards[index] += float(reward) * (DISCOUNT ** (2*i+1))
+        self.current_episode_length = 0
 
     def handle(self, state0, action, reward, state1):
         self.states_t0[self.current_pos] = state0
@@ -142,7 +158,6 @@ class Agent():
         self.tick_forward()
         if reward is not 0:
             self.backup_episode(reward)
-            self.current_episode_length = 0
         sys.stdout.flush()
 
     def save(self):
@@ -160,6 +175,10 @@ class Agent():
         random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE) - 1, N_REPLAYS_PER_ROUND)
         states, y = self.training_data_for_indexes(random_idxs)
         self.train_on(self.states_t0[random_idxs], y, True)
+
+        if len(self.interesting_games) > 0:
+            game = random.choice(self.interesting_games)
+            self.train_on(game[1], game[2], True)
 
     def training_data_for_indexes(self, indexes):
         y = self.model.predict(self.states_t0[indexes], verbose=0)
@@ -191,6 +210,8 @@ class Agent():
                                               subsample=(1,1),
                                               init='uniform'))
         self.model.add(Flatten())
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(256, activation='tanh', init='uniform'))
         self.model.add(Dropout(0.5))
         self.model.add(Dense(256, activation='tanh', init='uniform'))
         self.model.add(Dropout(0.5))

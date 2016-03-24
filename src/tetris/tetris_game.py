@@ -149,8 +149,8 @@ class Board:
                 if self.current_height > old_height:
                     points = points - (self.current_height - old_height)
                 else:
-                    points += 2
-                points += [0, 15, 30, 60, 120][n_cleared_rows]
+                    points += 3
+                points += [0, 20, 40, 60, 100][n_cleared_rows]
         return points, n_cleared_rows, next_state
 
 class Tetris:
@@ -218,7 +218,7 @@ class Tetris:
             else:
                 avg = (sum(running_scores)/float(len(running_scores)))
                 self.agent.avg_score = avg
-                print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {}, n interesting episodes: {}, game size: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games, len(self.agent.interesting_episodes), game_size))
+                print('Average: {}, Game: {} pts, {} lines cleared, {} pieces ({} seconds, nth play: {}, n interesting games: {}, game size: {})'.format(avg, reward, n_cleared, n_pieces, time.time() - game_start, n_games, len(self.agent.interesting_games), game_size))
 
                 if not self.agent.warming_up():
                     n_games += 1
