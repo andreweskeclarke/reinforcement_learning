@@ -16,7 +16,7 @@ import socket
 import sys
 import os
 
-N_REPLAYS_PER_ROUND = 1250
+N_REPLAYS_PER_ROUND = 750
 
 # SARS - [State_0, Action, Reward, State_1]
 STATE0_INDEX = 0
@@ -25,9 +25,9 @@ REWARD_INDEX = 2
 STATE1_INDEX = 3
 
 BUFFER_SIZE = 10000 
-DISCOUNT = 0.75
+DISCOUNT = 0.85
 BROADCAST_PORT = 50005
-DESIRED_GAME_QUEUE_SIZE = 10
+DESIRED_GAME_QUEUE_SIZE = 50
 
 class StatePrinter:
     def __init__(self):
@@ -72,16 +72,16 @@ class Agent():
         return len(self.interesting_games) < DESIRED_GAME_QUEUE_SIZE
 
     def epsilon(self):
-        n_settle = 500
-        start_e = 0.6
-        final_e = 0.9
+        n_settle = 1000
+        start_e = 0.4
+        final_e = 0.8
         if self.warming_up(): # Start with random games
             return 0.0
         elif self.n_warmups == 0:
             self.n_warmups = self.n_games
 
-        if self.n_games < n_settle + self.n_warmups: # Anneal to .9
-            return (start_e + (self.n_games - self.n_warmups) / n_settle) * final_e
+        if self.n_games < n_settle + self.n_warmups:
+            return (start_e + (((self.n_games - self.n_warmups) / n_settle) * (final_e - start_e)))
 
         return final_e
 
@@ -123,23 +123,27 @@ class Agent():
         if self.current_pos == 0: # Rolled over on indexes
             self.last_avg_rewards = sum(self.rewards) / len(self.rewards)
 
-    def keep_game(self, total_reward):
-        if len(self.interesting_games) >= DESIRED_GAME_QUEUE_SIZE:
-            return total_reward >= sum([g[0] for g in self.interesting_games])/len(self.interesting_games)
-
-        return total_reward >= 10
+    def keep_game(self, total_reward, indexes):
+        n_games = len(self.interesting_games)
+        if n_games <= self.interesting_games.maxlen and total_reward > 30:
+            states, y = self.training_data_for_indexes(indexes)
+            game_info = (total_reward, states, y)
+            self.interesting_games.append(game_info)
+        else: 
+            for g in self.interesting_games:
+                if g[0] < total_reward:
+                    self.interesting_games.remove(g)
+                    states, y = self.training_data_for_indexes(indexes)
+                    game_info = (total_reward, states, y)
+                    self.interesting_games.append(game_info)
 
     def game_over(self, total_reward):
         self.state_printer.print(self.states_t1[self.current_pos - 1])
         indexes = self.last_n_indexes(self.current_game_length)
         for i, index in enumerate(indexes):
-            self.rewards[index] += float(total_reward) * 0.25
+            self.rewards[index] += float(total_reward) * 0.5
         
-        if self.keep_game(total_reward):
-            states, y = self.training_data_for_indexes(indexes)
-            game_info = (total_reward, states, y)
-            self.interesting_games.append(game_info)
-
+        self.keep_game(total_reward, indexes)
         self.experience_replay()
         self.save()
         self.current_game_length = 0
@@ -147,7 +151,7 @@ class Agent():
     def backup_episode(self, reward):
         indexes = self.last_n_indexes(self.current_episode_length)
         for i, index in enumerate(indexes):
-            self.rewards[index] += float(reward) * (DISCOUNT ** (2*i+1))
+            self.rewards[index] += float(reward) * (DISCOUNT)
         self.current_episode_length = 0
 
     def handle(self, state0, action, reward, state1):
@@ -172,6 +176,8 @@ class Agent():
             print('Saved: {} and {}'.format(model_file, weights_file))
 
     def experience_replay(self):
+        if self.warming_up():
+            return
         random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE) - 1, N_REPLAYS_PER_ROUND)
         states, y = self.training_data_for_indexes(random_idxs)
         self.train_on(self.states_t0[random_idxs], y, True)
@@ -200,12 +206,12 @@ class Agent():
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
         self.model = Sequential()
-        self.model.add(Convolution2D(32, 4, 4,
+        self.model.add(Convolution2D(32, 3, 3,
                                               activation='tanh',
                                               subsample=(1,1),
                                               init='uniform',
                                               input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
-        self.model.add(Convolution2D(32, 4, 4,
+        self.model.add(Convolution2D(64, 4, 4,
                                               activation='tanh',
                                               subsample=(1,1),
                                               init='uniform'))

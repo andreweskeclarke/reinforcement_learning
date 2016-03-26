@@ -147,9 +147,9 @@ class Board:
                 n_cleared_rows = self.__freeze_tetronimo__()
                 self.current_tetronimo = None
                 if self.current_height > old_height:
-                    points = points - (self.current_height - old_height)
+                    points = points # - 0 (0.5 * (self.current_height - old_height))
                 else:
-                    points += 3
+                    points += 2
                 points += [0, 20, 40, 60, 100][n_cleared_rows]
         return points, n_cleared_rows, next_state
 
@@ -180,7 +180,7 @@ class Tetris:
             current_height = 0
             while play_on:
                 old_reward = reward
-                for i in range(0,4):
+                for i in range(0,10):
                     state_t0 = np.array(board.board_array, copy=True, ndmin=3)
                     merge_board_and_piece(state_t0, tetronimo)
                     action = self.agent.choose_action(state_t0)
