@@ -33,4 +33,16 @@ for i in range(0,32):
     plt.pcolor((model.get_weights()[0][i][0] + minimum), cmap=plt.get_cmap('Greys'))
 
 plt.tight_layout()
-plt.savefig(directory + '/conv_weights.png')
+plt.savefig(directory + '/conv_weights_l1.png')
+
+plt.axis('off')
+for i in range(0,64):
+    frame = plt.subplot(8,8,i+1)
+    frame.axes.get_xaxis().set_visible(False)
+    frame.axes.get_yaxis().set_visible(False)
+    import pdb
+    pdb.set_trace()
+    plt.pcolor((model.get_weights()[2][i][0] + minimum), cmap=plt.get_cmap('Greys'))
+
+plt.tight_layout()
+plt.savefig(directory + '/conv_weights_l2.png')
