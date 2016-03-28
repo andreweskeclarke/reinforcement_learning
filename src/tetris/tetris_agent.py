@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from keras.models import Sequential, model_from_json
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import *
@@ -24,9 +27,9 @@ ACTION_INDEX = 1
 REWARD_INDEX = 2
 STATE1_INDEX = 3
 
-BUFFER_SIZE = 10000 
+BUFFER_SIZE = 10000
 DISCOUNT = 0.85
-BROADCAST_PORT = 50005
+BROADCAST_PORT = 50006
 DESIRED_GAME_QUEUE_SIZE = 50
 
 class StatePrinter:
@@ -52,6 +55,7 @@ class Agent():
         self.actions = np.zeros([BUFFER_SIZE], dtype=np.int8)
         self.states_t1 = np.zeros((BUFFER_SIZE,1,BOARD_HEIGHT,BOARD_WIDTH), dtype=np.int8)
         self.rewards = np.zeros([BUFFER_SIZE], dtype=np.float32)
+        self.end_states = np.zeros((500,1,BOARD_HEIGHT,BOARD_WIDTH), dtype=np.int8)
         self.interesting_games = deque([], 2*DESIRED_GAME_QUEUE_SIZE)
         self.current_episode_length = 0
         self.current_game_length = 0
@@ -69,21 +73,10 @@ class Agent():
         return random.random() < self.epsilon()
 
     def warming_up(self):
-        return len(self.interesting_games) < DESIRED_GAME_QUEUE_SIZE
+        return False#len(self.interesting_games) < DESIRED_GAME_QUEUE_SIZE
 
     def epsilon(self):
-        n_settle = 1000
-        start_e = 0.4
-        final_e = 0.8
-        if self.warming_up(): # Start with random games
-            return 0.0
-        elif self.n_warmups == 0:
-            self.n_warmups = self.n_games
-
-        if self.n_games < n_settle + self.n_warmups:
-            return (start_e + (((self.n_games - self.n_warmups) / n_settle) * (final_e - start_e)))
-
-        return final_e
+        return 0.0
 
     def __log_choice__(self, state, vals):
         if random.random() < 0.003:
@@ -101,10 +94,8 @@ class Agent():
             self.recent_q_values.append(vals[0][choice])
         else:
             choice = random.choice(POSSIBLE_MOVES)
-            if choice == MOVE_DOWN and bool(random.getrandbits(1)):
+            while (choice == MOVE_DOWN or choice == DO_NOTHING) and random.random() < 0.9:
                 choice = random.choice(POSSIBLE_MOVES)
-                if choice == MOVE_DOWN and bool(random.getrandbits(1)):
-                    choice = random.choice(POSSIBLE_MOVES)
         return choice
         
     def last_n_indexes(self, n):
@@ -124,28 +115,35 @@ class Agent():
             self.last_avg_rewards = sum(self.rewards) / len(self.rewards)
 
     def keep_game(self, total_reward, indexes):
-        n_games = len(self.interesting_games)
-        if n_games <= self.interesting_games.maxlen and total_reward > 30:
-            states, y = self.training_data_for_indexes(indexes)
-            game_info = (total_reward, states, y)
-            self.interesting_games.append(game_info)
-        else: 
-            for g in self.interesting_games:
-                if g[0] < total_reward:
-                    self.interesting_games.remove(g)
-                    states, y = self.training_data_for_indexes(indexes)
-                    game_info = (total_reward, states, y)
-                    self.interesting_games.append(game_info)
+        pass
+        # n_games = len(self.interesting_games)
+        # if n_games <= self.interesting_games.maxlen and total_reward > 30:
+        #     states, y = self.training_data_for_indexes(indexes)
+        #     game_info = (total_reward, states, y)
+        #     self.interesting_games.append(game_info)
+        # else: 
+        #     for g in self.interesting_games:
+        #         if g[0] < total_reward:
+        #             self.interesting_games.remove(g)
+        #             states, y = self.training_data_for_indexes(indexes)
+        #             game_info = (total_reward, states, y)
+        #             self.interesting_games.append(game_info)
 
     def game_over(self, total_reward):
         self.state_printer.print(self.states_t1[self.current_pos - 1])
+        self.end_states[self.n_games] = self.states_t1[self.current_pos - 1]
+        if self.n_games >= 450:
+            plt.pcolor(np.average(self.end_states, axis=0)[0], cmap=plt.get_cmap('Greys'))
+            plt.tight_layout()
+            plt.savefig('exploration.png')
+            raise Exception('Ugly done!')
         indexes = self.last_n_indexes(self.current_game_length)
         for i, index in enumerate(indexes):
             self.rewards[index] += float(total_reward) * 0.5
         
         self.keep_game(total_reward, indexes)
-        self.experience_replay()
-        self.save()
+        #self.experience_replay()
+        #self.save()
         self.current_game_length = 0
 
     def backup_episode(self, reward):
