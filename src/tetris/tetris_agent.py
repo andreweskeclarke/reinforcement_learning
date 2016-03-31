@@ -16,7 +16,7 @@ import socket
 import sys
 import os
 
-N_REPLAYS_PER_ROUND = 750
+N_REPLAYS_PER_ROUND = 1000
 
 # SARS - [State_0, Action, Reward, State_1]
 STATE0_INDEX = 0
@@ -64,45 +64,48 @@ class Agent():
         self.state_printer = StatePrinter()
         self.avg_score = 0
         self.n_warmups = 0
+        self.exploiting_turn = bool(random.getrandbits(1))
 
     def exploit(self):
         return random.random() < self.epsilon()
 
     def warming_up(self):
-        return len(self.interesting_games) < DESIRED_GAME_QUEUE_SIZE
+        return False# len(self.interesting_games) < DESIRED_GAME_QUEUE_SIZE
 
     def epsilon(self):
-        return 0.5
-        # n_settle = 1000
-        # start_e = 0.4
-        # final_e = 0.8
-        # if self.warming_up(): # Start with random games
-        #     return 0.0
-        # elif self.n_warmups == 0:
-        #     self.n_warmups = self.n_games
+        # n_start = 500
+        # n_middle = 1000
+        # n_settle = 1500
+        # start_e = 0
+        # middle_e = 0.5
+        # final_e = 0.9
 
-        # if self.n_games < n_settle + self.n_warmups:
-        #     return (start_e + (((self.n_games - self.n_warmups) / n_settle) * (final_e - start_e)))
-
+        # if self.n_games < n_start:
+        #     return start_e
+        # elif self.n_games < n_middle:
+        #     return middle_e
         # return final_e
+        return 0.9
 
     def __log_choice__(self, state, vals):
-        if random.random() < 0.003:
+        if random.random() < 0.0005:
             print('Some predicted values for a board. Trained against {} examples so far.'.format(self.training_runs))
             print(np.array(state, ndmin=4))
             print('[MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN, DO_NOTHING]')
             print(vals)
-            print(np.argmax(vals))
+            max_arg = np.argmax(vals)
+            print('POSSIBLE_MOVES[{}] aka {}'.format(max_arg, POSSIBLE_MOVES[max_arg]))
 
     def choose_action(self, state):
-        if self.exploit():
+        if self.exploiting_turn:
             vals = self.model.predict(np.array(state, ndmin=4), verbose=0)
-            self.__log_choice__(state, vals)
-            choice = np.argmax(vals)
-            self.recent_q_values.append(vals[0][choice])
+            # self.__log_choice__(state, vals)
+            max_choice = np.argmax(vals)
+            choice = POSSIBLE_MOVES[max_choice]
+            self.recent_q_values.append(vals[0][max_choice])
         else:
             choice = random.choice(POSSIBLE_MOVES)
-            while (choice == MOVE_DOWN or choice == DO_NOTHING) and random.random() < 0.9:
+            while (choice == MOVE_DOWN or choice == DO_NOTHING) and random.random() < 0.66:
                 choice = random.choice(POSSIBLE_MOVES)
         return choice
         
@@ -142,7 +145,7 @@ class Agent():
         for i, index in enumerate(indexes):
             self.rewards[index] += float(total_reward) * 0.5
         
-        self.keep_game(total_reward, indexes)
+        # self.keep_game(total_reward, indexes)
         self.experience_replay()
         self.save()
         self.current_game_length = 0
@@ -153,14 +156,15 @@ class Agent():
             self.rewards[index] += float(reward) * (DISCOUNT)
         self.current_episode_length = 0
 
-    def handle(self, state0, action, reward, state1):
+    def handle(self, state0, action, reward, state1, added_piece):
+        if added_piece:
+            self.exploiting_turn = self.exploit()
+            self.backup_episode(reward)
         self.states_t0[self.current_pos] = state0
         self.actions[self.current_pos] = action
         self.rewards[self.current_pos] = reward
         self.states_t1[self.current_pos] = state1
         self.tick_forward()
-        if reward is not 0:
-            self.backup_episode(reward)
         sys.stdout.flush()
 
     def save(self):
@@ -205,23 +209,25 @@ class Agent():
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
         self.model = Sequential()
-        self.model.add(Convolution2D(32, 3, 3,
-                                              activation='tanh',
-                                              subsample=(1,1),
-                                              init='uniform',
-                                              input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
-        self.model.add(Convolution2D(64, 4, 4,
-                                              activation='tanh',
-                                              subsample=(1,1),
-                                              init='uniform'))
-        self.model.add(Flatten())
-        self.model.add(Dropout(0.5))
+        # self.model.add(Convolution2D(16, 3, 3,
+        #                                       activation='tanh',
+        #                                       subsample=(1,1),
+        #                                       init='uniform',
+        #                                       input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+        # self.model.add(Convolution2D(16, 5, 5,
+        #                                       activation='tanh',
+        #                                       subsample=(1,1),
+        #                                       init='uniform'))
+        # self.model.add(Flatten())
+        # self.model.add(Dropout(0.5))
+
+        self.model.add(Flatten(input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
         self.model.add(Dense(256, activation='tanh', init='uniform'))
         self.model.add(Dropout(0.5))
         self.model.add(Dense(256, activation='tanh', init='uniform'))
         self.model.add(Dropout(0.5))
         self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
-        optim = SGD(lr=0.1, decay=1e-7, momentum=0.5, nesterov=True)
+        optim = SGD(lr=0.1, decay=0.0, momentum=0.5, nesterov=True)
         self.model.compile(loss='mae', optimizer=optim)
 
 
@@ -246,7 +252,7 @@ class GreedyAgent(Agent):
     def choose_action(self, state):
         time.sleep(0.05)
         # return random.choice(POSSIBLE_MOVES)
-        return np.argmax(self.model.predict(np.array(state, ndmin=4), batch_size=1, verbose=0))
+        return POSSIBLE_MOVES[np.argmax(self.model.predict(np.array(state, ndmin=4), batch_size=1, verbose=0))]
 
     def handle(self, s0, a, r, s1):
         pass

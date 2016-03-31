@@ -26,23 +26,33 @@ model.load_weights(max(glob.iglob(directory + '/weights_*.h5'), key=os.path.getc
 minimum = min([np.amin(a) for a in model.get_weights()])
 
 plt.axis('off')
-for i in range(0,32):
-    frame = plt.subplot(8,4,i+1)
-    frame.axes.get_xaxis().set_visible(False)
-    frame.axes.get_yaxis().set_visible(False)
-    plt.pcolor((model.get_weights()[0][i][0] + minimum), cmap=plt.get_cmap('Greys'))
+weights_len1 = len(model.get_weights()[0])
+n_rows = 4
+n_cols = math.ceil(weights_len1 / float(n_rows))
+for i in range(0,weights_len1):
+    try:
+        frame = plt.subplot(n_cols,n_rows,i+1)
+        frame.axes.get_xaxis().set_visible(False)
+        frame.axes.get_yaxis().set_visible(False)
+        plt.pcolor((model.get_weights()[0][i][0] + minimum), cmap=plt.get_cmap('Greys'))
+    except:
+        pass
 
 plt.tight_layout()
 plt.savefig(directory + '/conv_weights_l1.png')
 
 plt.axis('off')
-for i in range(0,64):
-    frame = plt.subplot(8,8,i+1)
-    frame.axes.get_xaxis().set_visible(False)
-    frame.axes.get_yaxis().set_visible(False)
-    import pdb
-    pdb.set_trace()
-    plt.pcolor((model.get_weights()[2][i][0] + minimum), cmap=plt.get_cmap('Greys'))
+weights_len2 = len(model.get_weights()[2])
+n_rows = 4
+n_cols = math.ceil(weights_len2 / float(n_rows))
+for i in range(0,weights_len2):
+    try:
+        frame = plt.subplot(n_cols,n_rows,i+1)
+        frame.axes.get_xaxis().set_visible(False)
+        frame.axes.get_yaxis().set_visible(False)
+        plt.pcolor((model.get_weights()[2][i][0] + minimum), cmap=plt.get_cmap('Greys'))
+    except:
+        pass
 
 plt.tight_layout()
 plt.savefig(directory + '/conv_weights_l2.png')
