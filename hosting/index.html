@@ -9,9 +9,18 @@
 
 body { font: 12px Arial;}
 
+.liveView {
+    float: left;
+    padding: 5px;
+}
+.avg { 
+    stroke: red;
+    stroke-width: 1;
+    fill: none;
+}
 path { 
     stroke: steelblue;
-    stroke-width: 2;
+    stroke-width: 1;
     fill: none;
 }
 
@@ -23,10 +32,22 @@ path {
     shape-rendering: crispEdges;
 }
 
+.separator {
+    width: 100%;
+    clear: both;
+}
+
 </style>
 <body>
 
-<div id="liveView"></div>
+
+<div>
+    <div class="liveView" id="liveView1"></div>
+    <div class="liveView" id="liveView2"></div>
+<!--    <img id="convWeights1" src="conv_weights_l1.png" height="400px">
+    <img id="convWeights2" src="conv_weights_l2.png" height="400px"> -->
+</div>
+<div class="separator" ></div>
 <div id="graphs"></div>
 
 <!-- load the d3.js library -->    
@@ -38,17 +59,20 @@ path {
 <script>
 
 var drawGraphs = function() {
+//    $('#convWeights1').attr('src', "http://aeclarke.com/conv_weights_l1.png?" + new Date().getTime());
+//    $('#convWeights2').attr('src', "http://aeclarke.com/conv_weights_l2.png?" + new Date().getTime());
     d3.select("#graphs").selectAll("*").remove();
     $("#graphs").html("");
+    $separator = $('<div class="separator"></div>')
     // Set the dimensions of the canvas / graph
     var margin = {top: 30, right: 20, bottom: 30, left: 50},
-        width = 500 - margin.left - margin.right,
-        height = 2*(220 - margin.top - margin.bottom);
+        width = 250 - margin.left - margin.right,
+        height = 2*(140 - margin.top - margin.bottom);
     
     // Get the data
-    d3.csv("output.csv", function(error, data) {
+    d3.csv("output_small.csv", function(error, data) {
     
-        var fields = ["avg_score", "avg_q_value", "n_lines", "loss", "epsilon"];
+        var fields = ["avg_score", "avg_q_value", "n_lines", "loss"];
         for(var i = 0; i < fields.length; i++) {
             var fieldName = fields[i];
             // Set the ranges
@@ -60,7 +84,7 @@ var drawGraphs = function() {
             var yAxis = d3.svg.axis().scale(y).orient("left").ticks(5);
     
             // Scale the range of the data
-            x.domain([0, data.length]);
+            x.domain(d3.extent(data, function(d) { return +d['n_game']; }));
             y.domain(d3.extent(data, function(d) { return +d[fieldName]; }));
     
             // Define the line
@@ -72,6 +96,8 @@ var drawGraphs = function() {
             var svg = d3.select("#graphs")
                 .append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom)
                 .append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+            
+            $separator.clone().appendTo($('#graphs'));
     
             // Title
             svg.append("text")
@@ -85,7 +111,37 @@ var drawGraphs = function() {
             svg.append("path")
                 .attr("class", "line")
                 .attr("d", line(data));
-    
+
+            // Add the rolling average
+            movingAvg = function(n) {
+                return function (points) {
+                    points = points.map(function(each, index, array) {
+                        var to = index + n - 1;
+                        var subSeq, sum;
+                        if (to < points.length) {
+                            subSeq = array.slice(index, to + 1);
+                            sum = subSeq.reduce(function(a,b) { return [a[0] + b[0], a[1] + b[1]]; });
+                            return sum.map(function(each) { return each / n; });
+                        }
+                        return undefined;
+                    });
+                    points = points.filter(function(each) { return typeof each !== 'undefined' });
+                    // Transform the points into a basis line
+                    pathDesc = d3.svg.line().interpolate("basis")(points)
+                    // Remove the extra "M"
+                    return pathDesc.slice(1, pathDesc.length);
+                }
+            }
+
+            var movingAverageLine = d3.svg.line()
+                .x(function(d, i) { return x(+d['n_game']); })
+                .y(function(d, i) { return y(+d[fieldName]); })
+                .interpolate(movingAvg(50));
+
+            svg.append('svg:path')
+                .attr('class', 'avg')
+                .attr("d", movingAverageLine(data));
+
             // Add the X Axis
             svg.append("g")
                 .attr("class", "x axis")
@@ -104,14 +160,14 @@ drawGraphs();
 
 window.setInterval(function(){
     drawGraphs();
-}, 10000);
+}, 30000);
 
-(function() {
-    var ws = new WebSocket('ws://54.153.113.5:8080')
-    var scale = 20;
+var socketSetup = function(port, elementId) {
+    var ws = new WebSocket('ws://52.53.253.15:' + port)
+    var scale = 10;
     var boardW = 10;
     var boardH = 20;
-    var liveViewSvg = d3.select("#liveView").append("svg")
+    var liveViewSvg = d3.select(elementId).append("svg")
                                     .attr("width", boardW * scale)
                                     .attr("height", boardH * scale);
     ws.onmessage = function(e){ 
@@ -128,13 +184,12 @@ window.setInterval(function(){
             });
         });
     };
-}());
+};
+
+socketSetup(8080, "#liveView1");
+socketSetup(8081, "#liveView2");
 
 </script>
-
-<img src="conv_weights1.png">
-<img src="conv_weights2.png">
-
 
 </body>
 
