@@ -31,9 +31,17 @@ MOVES_MAP = [ lambda x:x.rotate_left(),
               lambda x:x.move_down(),
               lambda x:None ]
 
+POSSIBLE_MOVE_NAMES = [
+    "ROTATE_LEFT",
+    "ROTATE_RIGHT",
+    "MOVE_RIGHT",
+    "MOVE_LEFT",
+    "MOVE_DOWN",
+    "DO_NOTHING" ]
+
 POSSIBLE_MOVES = np.array([
-#    ROTATE_LEFT,
-#    ROTATE_RIGHT,
+    ROTATE_LEFT,
+    ROTATE_RIGHT,
     MOVE_RIGHT,
     MOVE_LEFT,
     MOVE_DOWN,
@@ -156,6 +164,7 @@ class Board:
 class Tetris:
     def __init__(self, agent):
         self.agent = agent
+        self.tetronimos = []
 
     def play_visually(self):
         curses.wrapper(self.play)
@@ -206,7 +215,7 @@ class Tetris:
                     added_piece = True
                     n_pieces += 1
                     tetronimo = self.generate_tetronimo(board)
-                    play_on = board.add_tetronimo(tetronimo) and n_pieces <= 40
+                    play_on = board.add_tetronimo(tetronimo) and n_pieces < 7
 
                 merge_board_and_piece(state_t1, tetronimo)
                 self.agent.handle(state_t0, action, reward - old_reward, state_t1, added_piece)
@@ -233,8 +242,11 @@ class Tetris:
 
 
     def generate_tetronimo(self, board):
-        # return Tetromino(board, random.choice([T, L, J, O, I, S, Z]))
-        return Tetromino(board, random.choice([O]))
+        if len(self.tetronimos) == 0:
+            # self.tetronimos = [T, L, J, O, I, S, Z, T, L, J, O, I, S, Z] # Official rules
+            self.tetronimos = [T, L, J, O, I, S, Z] # Official rules
+        random.shuffle(self.tetronimos)
+        return Tetromino(board, self.tetronimos.pop())
 
     def init_colors(self):
         curses.start_color()

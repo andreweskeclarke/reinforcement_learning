@@ -94,18 +94,23 @@ class Agent():
             print('[MOVE_RIGHT, MOVE_LEFT, MOVE_DOWN, DO_NOTHING]')
             print(vals)
             max_arg = np.argmax(vals)
-            print('POSSIBLE_MOVES[{}] aka {}'.format(max_arg, POSSIBLE_MOVES[max_arg]))
+            print('POSSIBLE_MOVES[{}] aka {} aka '.format(max_arg, POSSIBLE_MOVES[max_arg], POSSIBLE_MOVE_NAMES[max_arg]))
 
     def choose_action(self, state):
         if self.exploiting_turn:
-            vals = self.model.predict(np.array(state, ndmin=4), verbose=0)
-            # self.__log_choice__(state, vals)
-            max_choice = np.argmax(vals)
-            choice = POSSIBLE_MOVES[max_choice]
-            self.recent_q_values.append(vals[0][max_choice])
+            if not self.exploit():
+                choice = random.choice(POSSIBLE_MOVES)
+                while (choice == MOVE_DOWN or choice == DO_NOTHING) and random.random() < 0.9:
+                    choice = random.choice(POSSIBLE_MOVES)
+            
+            else:
+                vals = self.model.predict(np.array(state, ndmin=4), verbose=0)
+                max_choice = np.argmax(vals)
+                choice = POSSIBLE_MOVES[max_choice]
+                self.recent_q_values.append(vals[0][max_choice])
         else:
             choice = random.choice(POSSIBLE_MOVES)
-            while (choice == MOVE_DOWN or choice == DO_NOTHING) and random.random() < 0.66:
+            while (choice == MOVE_DOWN or choice == DO_NOTHING) and random.random() < 0.8:
                 choice = random.choice(POSSIBLE_MOVES)
         return choice
         
@@ -209,25 +214,19 @@ class Agent():
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
         self.model = Sequential()
-        # self.model.add(Convolution2D(16, 3, 3,
-        #                                       activation='tanh',
-        #                                       subsample=(1,1),
-        #                                       init='uniform',
-        #                                       input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
-        # self.model.add(Convolution2D(16, 5, 5,
-        #                                       activation='tanh',
-        #                                       subsample=(1,1),
-        #                                       init='uniform'))
-        # self.model.add(Flatten())
-        # self.model.add(Dropout(0.5))
+        self.model.add(Convolution2D(64, 3, 3,
+                                              activation='tanh',
+                                              subsample=(1,1),
+                                              init='uniform',
+                                              input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+        self.model.add(Flatten())
+        self.model.add(Dropout(0.5))
 
         self.model.add(Flatten(input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
-        self.model.add(Dense(256, activation='tanh', init='uniform'))
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(256, activation='tanh', init='uniform'))
+        self.model.add(Dense(512, activation='tanh', init='uniform'))
         self.model.add(Dropout(0.5))
         self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
-        optim = SGD(lr=0.1, decay=0.0, momentum=0.5, nesterov=True)
+        optim = SGD(lr=0.05, decay=0.0, momentum=0.5, nesterov=True)
         self.model.compile(loss='mae', optimizer=optim)
 
 
