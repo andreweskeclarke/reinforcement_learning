@@ -21,8 +21,8 @@ MOVE_LEFT = 3
 MOVE_DOWN = 4
 DO_NOTHING = 5
 
-BOARD_HEIGHT = 20
-BOARD_WIDTH = 10
+BOARD_HEIGHT = 10
+BOARD_WIDTH = 6
 
 MOVES_MAP = [ lambda x:x.rotate_left(),
               lambda x:x.rotate_right(),
@@ -147,10 +147,8 @@ class Board:
         old_height = self.current_height
         points = 0
         n_cleared_rows = 0
-        next_state = np.array(self.board_array, copy=True, ndmin=3)
         if self.current_tetronimo is not None:
             self.current_tetronimo.move_down()
-            next_state = np.array(self.board_array, copy=True, ndmin=3)
             if not self.current_tetronimo.can_move_down():
                 n_cleared_rows = self.__freeze_tetronimo__()
                 self.current_tetronimo = None
@@ -159,6 +157,7 @@ class Board:
                 else:
                     points += 2
                 points += [0, 20, 40, 60, 100][n_cleared_rows]
+        next_state = np.array(self.board_array, copy=True, ndmin=3)
         return points, n_cleared_rows, next_state
 
 class Tetris:
@@ -179,6 +178,7 @@ class Tetris:
         while True:
             board = Board()
             play_on = True
+            self.reset_tetronimos()
             tetronimo = self.generate_tetronimo(board)
             board.add_tetronimo(tetronimo)
             game_start = time.time()
@@ -215,7 +215,7 @@ class Tetris:
                     added_piece = True
                     n_pieces += 1
                     tetronimo = self.generate_tetronimo(board)
-                    play_on = board.add_tetronimo(tetronimo) and n_pieces < 7
+                    play_on = board.add_tetronimo(tetronimo) and n_pieces < 14
 
                 merge_board_and_piece(state_t1, tetronimo)
                 self.agent.handle(state_t0, action, reward - old_reward, state_t1, added_piece)
@@ -241,11 +241,14 @@ class Tetris:
                     print('output: {}, {}, {}, {}, {}, {}, {}, {}'.format(n_games, reward, avg_q_value, n_cleared, avg_loss, avg_accuracy, self.agent.training_runs, self.agent.epsilon()))
 
 
+    def reset_tetronimos(self):
+        self.tetronimos = [T, L, J, O, I, S, Z, T, L, J, O, I, S, Z] # Official rules
+
     def generate_tetronimo(self, board):
         if len(self.tetronimos) == 0:
             # self.tetronimos = [T, L, J, O, I, S, Z, T, L, J, O, I, S, Z] # Official rules
-            self.tetronimos = [T, L, J, O, I, S, Z] # Official rules
-        random.shuffle(self.tetronimos)
+            self.reset_tetronimos()
+        # random.shuffle(self.tetronimos)
         return Tetromino(board, self.tetronimos.pop())
 
     def init_colors(self):

@@ -16,7 +16,7 @@ import socket
 import sys
 import os
 
-N_REPLAYS_PER_ROUND = 1000
+N_REPLAYS_PER_ROUND = 2000
 
 # SARS - [State_0, Action, Reward, State_1]
 STATE0_INDEX = 0
@@ -73,19 +73,7 @@ class Agent():
         return False# len(self.interesting_games) < DESIRED_GAME_QUEUE_SIZE
 
     def epsilon(self):
-        # n_start = 500
-        # n_middle = 1000
-        # n_settle = 1500
-        # start_e = 0
-        # middle_e = 0.5
-        # final_e = 0.9
-
-        # if self.n_games < n_start:
-        #     return start_e
-        # elif self.n_games < n_middle:
-        #     return middle_e
-        # return final_e
-        return 0.9
+        return min(0.9 + (0.1 * (self.n_games)/200000), 0.99)
 
     def __log_choice__(self, state, vals):
         if random.random() < 0.0005:
@@ -214,16 +202,24 @@ class Agent():
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
         self.model = Sequential()
-        self.model.add(Convolution2D(64, 3, 3,
-                                              activation='tanh',
-                                              subsample=(1,1),
-                                              init='uniform',
-                                              input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
-        self.model.add(Flatten())
-        self.model.add(Dropout(0.5))
+       #  self.model.add(Convolution2D(64, 5, 5,
+       #                                        activation='tanh',
+       #                                        subsample=(2,2),
+       #                                        init='he_uniform',
+       #                                        input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+       #  self.model.add(Flatten())
+       #  self.model.add(Dropout(0.5))
 
         self.model.add(Flatten(input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
-        self.model.add(Dense(512, activation='tanh', init='uniform'))
+        self.model.add(Dense(128, activation='tanh', init='uniform'))
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(128, activation='tanh', init='uniform'))
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(128, activation='tanh', init='uniform'))
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(128, activation='tanh', init='uniform'))
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(128, activation='tanh', init='uniform'))
         self.model.add(Dropout(0.5))
         self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
         optim = SGD(lr=0.05, decay=0.0, momentum=0.5, nesterov=True)
