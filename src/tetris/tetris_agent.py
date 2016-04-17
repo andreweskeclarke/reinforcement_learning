@@ -42,7 +42,7 @@ class StatePrinter:
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.sock.bind(('', 0))
 
-    def tbug(self, state):
+    def send_to_websocket(self, state):
         data = bytes("|".join([",".join(map(str, x)) for x in state[0]]) + "\n", 'ascii')
         self.sock.sendto(data, ("<broadcast>", BROADCAST_PORT))
 
@@ -141,7 +141,7 @@ class Agent():
                     self.interesting_games.append(game_info)
 
     def game_over(self, total_reward):
-        self.state_printer.tbug(self.states_t1[self.current_pos - 1])
+        self.state_printer.send_to_websocket(self.states_t1[self.current_pos - 1])
         indexes = self.last_n_indexes(self.current_game_length)
         debug_s1 = ""
         debug_s2 = ""
@@ -269,27 +269,36 @@ class Agent():
 
 
 class GreedyAgent(Agent):
-    def __init__(self, model_path=None, weights_path=None):
+    def __init__(self):
         threading.Thread.__init__(self)
-        self.model_path = model_path
-        self.weights_path = weights_path
         self.init_model()
-        self.replay_memory = []
+        self.state_printer = StatePrinter()
 
     def init_model(self):
-        if self.model_path:
-            self.model = model_from_json(open(self.model_path).read())
-        else:
-            self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
-        if self.weights_path:
-            self.model.load_weights(self.weights_path)
-        else:
-            self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
+        self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
+        self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
+
+    def game_over(self, total_reward):
+        self.state_printer.send_to_websocket(self.states_t1[self.current_pos - 1])
+        time.sleep(2)
+        if self.n_games % 5 == 0:
+            self.init_model()
+
+    def on_episode_end(self, reward):
+        pass
 
     def choose_action(self, state):
-        time.sleep(0.05)
-        # return random.choice(POSSIBLE_MOVES)
-        return POSSIBLE_MOVES[np.argmax(self.model.predict(np.array(state, ndmin=4), batch_size=1, verbose=0))]
+        time.sleep(1)
+        self.state_printer.send_to_websocket(state)
+        vals = self.model.predict(np.array(state, ndmin=4), verbose=0)
+        print(state)
+        print(POSSIBLE_MOVE_NAMES)
+        print(vals)
+        max_choice = np.argmax(vals)
+        choice = POSSIBLE_MOVES[max_choice]
+        self.recent_q_values.append(vals[0][max_choice])
+        print(str(choice) + " -> " + POSSIBLE_MOVE_NAMES[choice])
+        return choice
 
     def handle(self, s0, a, r, s1):
         pass

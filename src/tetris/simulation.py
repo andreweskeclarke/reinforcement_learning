@@ -8,13 +8,11 @@ import argparse
 def main():
     parser = argparse.ArgumentParser(description='Run a tetris simulation')
     parser.add_argument('--watch', action='store_true', help='Run the newest models')
-    parser.add_argument('--model', help='Path to the newest model')
-    parser.add_argument('--weights', help='Path to the weights for the newest model')
     args = parser.parse_args()
 
     if args.watch:
-        a = GreedyAgent(args.model, args.weights)
-        Tetris(a).play_visually()
+        a = GreedyAgent()
+        Tetris(a).play()
     else:
         a = Agent()
         Tetris(a).play()
