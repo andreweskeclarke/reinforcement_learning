@@ -270,17 +270,15 @@ class Agent():
 
 class GreedyAgent(Agent):
     def __init__(self):
-        threading.Thread.__init__(self)
+        super().__init__()
         self.init_model()
-        self.state_printer = StatePrinter()
 
     def init_model(self):
-        self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
-        self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
+        self.model = model_from_json(open(max(glob.iglob('/home/ubuntu/src/reinforcement_learning/output/model_*.json'), key=os.path.getctime)).read())
+        self.model.load_weights(max(glob.iglob('/home/ubuntu/src/reinforcement_learning/output/weights_*.h5'), key=os.path.getctime))
 
     def game_over(self, total_reward):
-        self.state_printer.send_to_websocket(self.states_t1[self.current_pos - 1])
-        time.sleep(2)
+        time.sleep(1)
         if self.n_games % 5 == 0:
             self.init_model()
 
