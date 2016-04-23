@@ -26,7 +26,7 @@ REWARD_INDEX = 2
 STATE1_INDEX = 3
 
 BUFFER_SIZE = 50000
-DISCOUNT = 0.2
+DISCOUNT = 0.5
 BROADCAST_PORT = 50005
 
 DEBUG=False
@@ -79,7 +79,7 @@ class Agent():
         return False
 
     def epsilon(self):
-        return min(self.n_games / 15000, 0.95)
+        return min(self.n_games / 5000, 0.95)
 
     def __log_choice__(self, state, vals):
         if random.random() < 0.0005:
@@ -146,7 +146,8 @@ class Agent():
             tbug(self.states_t0[i])
             tbug(str(self.actions[i]) + " - " + POSSIBLE_MOVE_NAMES[self.actions[i]])
             tbug(self.rewards[i])
-            tbug('-->')
+            tbug('--->')
+            tbug(self.states_t1[i])
         tbug('---------------------------')
         tbug('---------------------------')
         self.current_game_length = 0
@@ -203,36 +204,16 @@ class Agent():
     def experience_replay(self):
         if self.warming_up():
             return
-        if self.n_games > 2 and self.n_games % 250 == 0:
+        if self.rolled_over_buffer:
             print('Training on collected data...')
             self.rolled_over_buffer = False
             keep_training = True
-            random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE) - 1, min(self.n_plays, 15000))
-            states, y = self.training_data_for_indexes(random_idxs)
-            loss_i1, accuracy = self.model.train_on_batch(states, y, accuracy=True)
-            losses = deque([0,float(loss_i1)], 25)
-            n_epochs = 1
-            n_runs = 10
-            for i in range(0,n_runs):
-            # while (n_epochs < 40) and (len(losses) < 5 or statistics.variance(losses) > 0.0005):
-                random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE) - 1, min(self.n_plays, 15000))
-                states, y = self.training_data_for_indexes(random_idxs)
-                tbug(states[0][0])
-                tbug(self.actions[random_idxs[0]])
-                tbug(self.rewards[random_idxs[0]])
-                tbug(POSSIBLE_MOVE_NAMES[self.actions[random_idxs[0]]])
-                tbug(y[0])
-                loss_i2, accuracy = self.model.train_on_batch(states, y, accuracy=True)
-                losses.append(float(loss_i2))
-                # print(["{0:0.4f}".format(i) for i in losses])
-                print('---> (mean: {}, var: {})'.format(sum(losses)/float(len(losses)), statistics.variance(losses)))
-                sys.stdout.flush()
-                loss_i1 = loss_i2
-                n_epochs += 1
+            mask = np.random.rand(BUFFER_SIZE) < 0.85
 
-            self.training_runs += y.shape[0]
-            self.recent_losses.append(loss_i2)
-            self.recent_accuracies.append(accuracy)
+            X_train, Y_train = self.training_data_for_indexes(mask)
+            X_test, Y_test = self.training_data_for_indexes(~mask)
+            self.model.fit(X_train, Y_train, batch_size=1, nb_epoch=1, validation_data=(X_test, Y_test))
+            self.training_runs += 1
             self.save()
 
     def training_data_for_indexes(self, indexes):
@@ -248,13 +229,13 @@ class Agent():
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
         self.model = Sequential()
-        self.model.add(Convolution2D(64, 4, 4,
-                                              activation='tanh',
-                                              subsample=(2,2),
-                                              init='glorot_uniform',
-                                              input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
-        self.model.add(Flatten())
-        self.model.add(Dropout(0.5))
+        # self.model.add(Convolution2D(64, 4, 4,
+        #                                       activation='tanh',
+        #                                       subsample=(2,2),
+        #                                       init='glorot_uniform',
+        #                                       input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+        # self.model.add(Flatten())
+        # self.model.add(Dropout(0.5))
 
         self.model.add(Flatten(input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
         self.model.add(Dense(256, activation='tanh', init='glorot_uniform'))

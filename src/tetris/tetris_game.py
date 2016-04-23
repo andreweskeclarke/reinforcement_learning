@@ -21,8 +21,8 @@ MOVE_LEFT = 3
 MOVE_DOWN = 4
 DO_NOTHING = 5
 
-BOARD_HEIGHT = 10
-BOARD_WIDTH = 6
+BOARD_HEIGHT = 20
+BOARD_WIDTH = 10
 
 MOVES_MAP = [ lambda x:x.rotate_left(),
               lambda x:x.rotate_right(),
@@ -152,11 +152,12 @@ class Board:
             if not self.current_tetronimo.can_move_down():
                 n_cleared_rows = self.__freeze_tetronimo__()
                 self.current_tetronimo = None
-                if self.current_height <= old_height:
-                    points += 2
+                if n_cleared_rows > 0:
+                    points = [0, 20, 40, 60, 100][n_cleared_rows]
+                elif self.current_height <= old_height:
+                    points = 2
                 else:
-                    points = -1
-                points += [0, 20, 40, 60, 100][n_cleared_rows]
+                    points = -2
         return points, n_cleared_rows
 
     def copy_board_state(self):
@@ -207,24 +208,18 @@ class Tetris:
                         episode_reward += new_reward
                         n_cleared += lines_cleared
                     elif action == MOVE_DOWN:
-                        pass
-                        # while not board.current_tetronimo_settled():
-                        #     new_reward, lines_cleared = board.tick()
-                        #     reward += new_reward
-                        #     episode_reward += new_reward
-                        #     n_cleared += lines_cleared
+                        while not board.current_tetronimo_settled():
+                            new_reward, lines_cleared = board.tick()
+                            reward += new_reward
+                            episode_reward += new_reward
+                            n_cleared += lines_cleared
                     else:
                         MOVES_MAP[action](tetronimo)
-                        if plays_since_tick_counter >= 10:
-                            while not board.current_tetronimo_settled():
-                                new_reward, lines_cleared = board.tick()
-                                reward += new_reward
-                                episode_reward += new_reward
-                                n_cleared += lines_cleared
-                            # new_reward, lines_cleared = board.tick()
-                            # reward += new_reward
-                            # episode_reward += new_reward
-                            # n_cleared += lines_cleared
+                        if plays_since_tick_counter >= 5:
+                            new_reward, lines_cleared = board.tick()
+                            reward += new_reward
+                            episode_reward += new_reward
+                            n_cleared += lines_cleared
 
                     continue_episode = not board.current_tetronimo_settled()
                     if continue_episode:
@@ -237,7 +232,7 @@ class Tetris:
                         self.agent.handle(state_t0, action, episode_reward, state_t1)
                         if not could_add_more:
                             episode_reward = -4
-                        continue_game = could_add_more and n_pieces < 2
+                        continue_game = could_add_more and n_pieces < 50
 
                 self.agent.on_episode_end(episode_reward)
                 n_pieces += 1
@@ -269,7 +264,7 @@ class Tetris:
 
     def reset_tetronimos(self):
         # self.tetronimos = [T, L, J, O, I, S, Z, T, L, J, O, I, S, Z] # Official rules
-        self.tetronimos = [L, J]
+        self.tetronimos = [O]
 
     def generate_tetronimo(self, board):
         if len(self.tetronimos) == 0:
