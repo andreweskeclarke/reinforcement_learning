@@ -15,6 +15,7 @@ import math
 import socket
 import sys
 import os
+import statistics
 
 N_REPLAYS_PER_ROUND = 2000
 
@@ -24,10 +25,9 @@ ACTION_INDEX = 1
 REWARD_INDEX = 2
 STATE1_INDEX = 3
 
-BUFFER_SIZE = 25000
-DISCOUNT = 0.85
+BUFFER_SIZE = 50000
+DISCOUNT = 0.2
 BROADCAST_PORT = 50005
-DESIRED_GAME_QUEUE_SIZE = 50
 
 DEBUG=False
 
@@ -58,7 +58,6 @@ class Agent():
         self.actions = np.zeros([BUFFER_SIZE], dtype=np.int8)
         self.states_t1 = np.zeros((BUFFER_SIZE,1,BOARD_HEIGHT,BOARD_WIDTH), dtype=np.int8)
         self.rewards = np.zeros([BUFFER_SIZE], dtype=np.float32)
-        self.interesting_games = deque([], 2*DESIRED_GAME_QUEUE_SIZE)
         self.current_episode_length = 0
         self.current_game_length = 0
         self.training_runs = 0
@@ -80,7 +79,7 @@ class Agent():
         return False
 
     def epsilon(self):
-        return min((0.0 + 0.9 * (self.n_games)/10000), 0.9)
+        return min(self.n_games / 15000, 0.95)
 
     def __log_choice__(self, state, vals):
         if random.random() < 0.0005:
@@ -95,9 +94,6 @@ class Agent():
         if self.exploiting_turn:
             if not self.exploit():
                 choice = random.choice(POSSIBLE_MOVES)
-                while (choice == MOVE_DOWN or choice == DO_NOTHING) and random.random() < 0.9:
-                    choice = random.choice(POSSIBLE_MOVES)
-            
             else:
                 vals = self.model.predict(np.array(state, ndmin=4), verbose=0)
                 max_choice = np.argmax(vals)
@@ -105,8 +101,9 @@ class Agent():
                 self.recent_q_values.append(vals[0][max_choice])
         else:
             choice = random.choice(POSSIBLE_MOVES)
-            while (choice == MOVE_DOWN or choice == DO_NOTHING) and random.random() < 0.8:
+            while choice in [MOVE_DOWN]:
                 choice = random.choice(POSSIBLE_MOVES)
+                
         return choice
         
     def last_n_indexes(self, n):
@@ -126,26 +123,12 @@ class Agent():
             self.rolled_over_buffer = True
             self.last_avg_rewards = sum(self.rewards) / len(self.rewards)
 
-    def keep_game(self, total_reward, indexes):
-        n_games = len(self.interesting_games)
-        if n_games <= self.interesting_games.maxlen and total_reward > 30:
-            states, y = self.training_data_for_indexes(indexes)
-            game_info = (total_reward, states, y)
-            self.interesting_games.append(game_info)
-        else: 
-            for g in self.interesting_games:
-                if g[0] < total_reward:
-                    self.interesting_games.remove(g)
-                    states, y = self.training_data_for_indexes(indexes)
-                    game_info = (total_reward, states, y)
-                    self.interesting_games.append(game_info)
-
     def game_over(self, total_reward):
         self.state_printer.send_to_websocket(self.states_t1[self.current_pos - 1])
         indexes = self.last_n_indexes(self.current_game_length)
         debug_s1 = ""
         debug_s2 = ""
-        total_reward_factor = 1.0 + (float(total_reward) * 0.01)
+        total_reward_factor = 1.0 + (float(total_reward) * 0.05)
         for i, index in enumerate(indexes):
             debug_s1 += str(self.rewards[index]) + ","
             self.rewards[index] = self.rewards[index] * total_reward_factor
@@ -156,31 +139,45 @@ class Agent():
         tbug(debug_s2)
         tbug("")
         self.experience_replay()
-        self.save()
+        tbug('GAME OVER')
+        tbug('GAME OVER')
+        tbug('GAME OVER')
+        for i in range(self.current_pos - self.current_game_length, self.current_pos):
+            tbug(self.states_t0[i])
+            tbug(str(self.actions[i]) + " - " + POSSIBLE_MOVE_NAMES[self.actions[i]])
+            tbug(self.rewards[i])
+            tbug('-->')
+        tbug('---------------------------')
+        tbug('---------------------------')
         self.current_game_length = 0
 
+    def copy_n_previous_states(self, n):
+        self.states_t0[self.current_pos] = self.states_t0[self.current_pos - n]
+        self.actions[self.current_pos] = self.actions[self.current_pos - n]
+        self.rewards[self.current_pos] = self.rewards[self.current_pos - n]
+        self.states_t1[self.current_pos] = self.states_t1[self.current_pos - n]
+        self.tick_forward()
+        
+
     def backup_episode(self, reward):
-        indexes = self.last_n_indexes(self.current_episode_length)
+        indexes = self.last_n_indexes(self.current_game_length)
         debug_indexes = ""
         debug_s1 = ""
         debug_s2 = ""
+        n_ineffective_actions = 0
         for i, index in enumerate(indexes):
             debug_indexes += str(index) + ","
             debug_s1 += str(self.rewards[index]) + ","
-            self.rewards[index] += float(reward) * (DISCOUNT**i)
+            if np.array_equal(self.states_t0[index], self.states_t1[index]):
+                n_ineffective_actions += 1
+                self.rewards[index] = 0
+            else:
+                self.rewards[index] += float(reward) * (DISCOUNT**(i - n_ineffective_actions))
             debug_s2 += str(self.rewards[index]) + ","
         tbug(debug_indexes)
         tbug(debug_s1)
         tbug(debug_s2)
         tbug("")
-        if self.current_episode_length > 1:
-            tbug(self.states_t0[self.current_pos - 2])
-            tbug(str(self.actions[self.current_pos - 2]) + " - " + POSSIBLE_MOVE_NAMES[self.actions[self.current_pos - 2]])
-            tbug(self.states_t1[self.current_pos - 2])
-            tbug('----->')
-        tbug(self.states_t0[self.current_pos - 1])
-        tbug(str(self.actions[self.current_pos - 1]) + " - " + POSSIBLE_MOVE_NAMES[self.actions[self.current_pos - 1]])
-        tbug(self.states_t1[self.current_pos - 1])
         self.current_episode_length = 0
 
     def on_episode_end(self, reward):
@@ -196,40 +193,47 @@ class Agent():
         sys.stdout.flush()
 
     def save(self):
-        self.save_requests += 1
-        if self.save_requests == 100:
-            self.save_requests = 0
-            name = time.strftime("%m-%dT%H%M%S%Z")
-            model_file = 'output/model_{}.json'.format(name)
-            weights_file = 'output/weights_{}.h5'.format(name)
-            open(model_file, 'w').write(self.model.to_json())
-            self.model.save_weights(weights_file, overwrite=True)
-            tbug('Saved: {} and {}'.format(model_file, weights_file))
+        name = time.strftime("%m-%dT%H%M%S%Z")
+        model_file = 'output/model_{}.json'.format(name)
+        weights_file = 'output/weights_{}.h5'.format(name)
+        open(model_file, 'w').write(self.model.to_json())
+        self.model.save_weights(weights_file, overwrite=True)
+        tbug('Saved: {} and {}'.format(model_file, weights_file))
 
     def experience_replay(self):
         if self.warming_up():
             return
-        if self.rolled_over_buffer:
-            print('TRAIN')
+        if self.n_games > 2 and self.n_games % 250 == 0:
+            print('Training on collected data...')
             self.rolled_over_buffer = False
             keep_training = True
-            random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE) - 1, min(self.n_plays, BUFFER_SIZE))
+            random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE) - 1, min(self.n_plays, 15000))
             states, y = self.training_data_for_indexes(random_idxs)
             loss_i1, accuracy = self.model.train_on_batch(states, y, accuracy=True)
-            improvements = deque([], 3)
-            while keep_training:
-                random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE) - 1, min(self.n_plays, BUFFER_SIZE))
+            losses = deque([0,float(loss_i1)], 25)
+            n_epochs = 1
+            n_runs = 10
+            for i in range(0,n_runs):
+            # while (n_epochs < 40) and (len(losses) < 5 or statistics.variance(losses) > 0.0005):
+                random_idxs = np.random.randint(0, min(self.n_plays, BUFFER_SIZE) - 1, min(self.n_plays, 15000))
                 states, y = self.training_data_for_indexes(random_idxs)
+                tbug(states[0][0])
+                tbug(self.actions[random_idxs[0]])
+                tbug(self.rewards[random_idxs[0]])
+                tbug(POSSIBLE_MOVE_NAMES[self.actions[random_idxs[0]]])
+                tbug(y[0])
                 loss_i2, accuracy = self.model.train_on_batch(states, y, accuracy=True)
-                improvements.append(abs((loss_i2 - loss_i1)) / float(loss_i1))
-                print('{} - {} / {}  =  {}'.format(loss_i2, loss_i1, loss_i1, sum(improvements)/float(len(improvements))))
-                keep_training = sum(improvements)/float(len(improvements)) > 0.001 and len(improvements) > 1
+                losses.append(float(loss_i2))
+                # print(["{0:0.4f}".format(i) for i in losses])
+                print('---> (mean: {}, var: {})'.format(sum(losses)/float(len(losses)), statistics.variance(losses)))
                 sys.stdout.flush()
                 loss_i1 = loss_i2
+                n_epochs += 1
 
             self.training_runs += y.shape[0]
             self.recent_losses.append(loss_i2)
             self.recent_accuracies.append(accuracy)
+            self.save()
 
     def training_data_for_indexes(self, indexes):
         y = self.model.predict(self.states_t0[indexes], verbose=0)
@@ -244,28 +248,20 @@ class Agent():
     #     self.model = model_from_json(open(max(glob.iglob('output/model_*.json'), key=os.path.getctime)).read())
     #     self.model.load_weights(max(glob.iglob('output/weights_*.h5'), key=os.path.getctime))
         self.model = Sequential()
-       #  self.model.add(Convolution2D(64, 5, 5,
-       #                                        activation='tanh',
-       #                                        subsample=(2,2),
-       #                                        init='he_uniform',
-       #                                        input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
-       #  self.model.add(Flatten())
-       #  self.model.add(Dropout(0.5))
+        self.model.add(Convolution2D(64, 4, 4,
+                                              activation='tanh',
+                                              subsample=(2,2),
+                                              init='glorot_uniform',
+                                              input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+        self.model.add(Flatten())
+        self.model.add(Dropout(0.5))
 
         self.model.add(Flatten(input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
-        self.model.add(Dense(1024, activation='tanh', init='he_uniform'))
+        self.model.add(Dense(256, activation='tanh', init='glorot_uniform'))
         self.model.add(Dropout(0.5))
-        self.model.add(Dense(128, activation='tanh', init='he_uniform'))
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(128, activation='tanh', init='he_uniform'))
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(128, activation='tanh', init='he_uniform'))
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(128, activation='tanh', init='he_uniform'))
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
-        optim = SGD(lr=0.05, decay=0.0, momentum=0.5, nesterov=True)
-        self.model.compile(loss='mae', optimizer=optim)
+        self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='glorot_uniform'))
+        optim = RMSprop()
+        self.model.compile(loss='mse', optimizer=optim)
 
 
 class GreedyAgent(Agent):
