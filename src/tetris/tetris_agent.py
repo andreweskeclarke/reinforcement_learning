@@ -153,6 +153,7 @@ class Agent():
             frame = plt.subplot(n_cols,n_rows,3*i+3)
             frame.axes.get_xaxis().set_visible(False)
             frame.axes.get_yaxis().set_visible(False)
+            print('X shape {}'.format(X_train[j].shape))
             y = np.reshape(self.model.predict(X_train[j]), (20,10))
             plt.pcolor(y, cmap=plt.get_cmap('Greys'))
 

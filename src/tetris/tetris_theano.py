@@ -44,11 +44,11 @@ class Model(object):
         return x
 
     def predict(self, x):
-        input = T.vector('input')
+        input = T.matrix('input')
+        x = x[:, np.newaxis]
         predict_function = theano.function([input], self.output(input))
         y = predict_function(x)
-        print(y)
-        print(y.shape)
+        print('Y shaoe {}'.format(y.shape))
         return y
 
     def squared_error(self, x, y):
