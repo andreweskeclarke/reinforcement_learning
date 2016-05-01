@@ -128,8 +128,8 @@ class Agent():
             self.rolled_over_buffer = False
             mask = np.random.rand(BUFFER_SIZE) < 0.8
             X_train, Y_train = self.training_data_for_indexes(mask)
-            self.model.train(X_train, Y_train, 1)
-            self.draw_output(X_train, Y_train)
+            self.model.train(X1_train, Y_train, 1)
+            self.draw_output(X1_train, Y_train)
 
     def draw_output(self, X_train, Y_train):
         plt.axis('off')
@@ -137,35 +137,47 @@ class Agent():
         n_rows = 3
         plt.figure(dpi=80, figsize=(n_rows,n_cols))
         for i in range(0,10):
-            j = random.randint(0,len(X_train))
+            j = random.randint(0,len(X_train) - 1)
             frame = plt.subplot(n_cols,n_rows,3*i+1)
             frame.axes.get_xaxis().set_visible(False)
             frame.axes.get_yaxis().set_visible(False)
             x = np.reshape(X_train[j], (20,10))
-            plt.pcolor(x, cmap=plt.get_cmap('Greys'))
-
-            frame = plt.subplot(n_cols,n_rows,3*i+2)
-            frame.axes.get_xaxis().set_visible(False)
-            frame.axes.get_yaxis().set_visible(False)
-            y = np.reshape(Y_train[j], (20,10))
-            plt.pcolor(y, cmap=plt.get_cmap('Greys'))
+            plt.pcolor(x, cmap=plt.get_cmap('Greys'), vmin=-1, vmax=1)
 
             frame = plt.subplot(n_cols,n_rows,3*i+3)
             frame.axes.get_xaxis().set_visible(False)
             frame.axes.get_yaxis().set_visible(False)
-            print('X shape {}'.format(X_train[j].shape))
             y = np.reshape(self.model.predict(X_train[j]), (20,10))
-            plt.pcolor(y, cmap=plt.get_cmap('Greys'))
+            plt.pcolor(y, cmap=plt.get_cmap('Greys'), vmin=-1, vmax=1)
+            if i == 0:
+                print(y)
 
         plt.tight_layout()
         plt.savefig('./board_predictions.png')
+        plt.close()
+
+    def input_size(self):
+        return BOARD_HEIGHT*BOARD_WIDTH + len(POSSIBLE_MOVES)
+
+    def output_size(self):
+        return BOARD_HEIGHT*BOARD_WIDTH
+        
+    # def training_data_for_indexes(self, indexes):
+    #     input = np.reshape(self.states_t0[indexes], (-1,200)) 
+    #     action = np.array([np.array(POSSIBLE_MOVES == a, dtype=np.float32).flatten() for a in self.actions[indexes]])
+    #     input = np.hstack((input, action))
+    #     return (input,
+    #             np.reshape(self.states_t1[indexes], (-1,self.output_size())))
 
     def training_data_for_indexes(self, indexes):
-        return (np.reshape(self.states_t0[indexes], (-1,BOARD_HEIGHT*BOARD_WIDTH)), 
-                np.reshape(self.states_t1[indexes], (-1,BOARD_HEIGHT*BOARD_WIDTH)))
+        return (np.reshape(self.states_t0[indexes], (-1,200)),
+                np.reshape(self.states_t1[indexes], (-1,self.output_size())))
 
     def init_model(self):
         self.model = tetris_theano.Model([
-                tetris_theano.DenseLayer(BOARD_HEIGHT*BOARD_WIDTH, BOARD_HEIGHT*BOARD_WIDTH)
+                tetris_theano.Conv2DLayer(64, 4, 4),
+                tetris_theano.Flatten(),
+                tetris_theano.DenseLayer(64*17*7, 256),
+                tetris_theano.DenseLayer(256, self.output_size())
             ])
         self.model.compile()
