@@ -127,11 +127,11 @@ class Agent():
         if self.rolled_over_buffer:
             self.rolled_over_buffer = False
             mask = np.random.rand(BUFFER_SIZE) < 0.8
-            X_train, Y_train = self.training_data_for_indexes(mask)
-            self.model.train(X1_train, Y_train, 1)
-            self.draw_output(X1_train, Y_train)
+            X1_train, X2_train, Y_train = self.training_data_for_indexes(mask)
+            self.model.train(X1_train, X2_train, Y_train, 1)
+            self.draw_output(X1_train, X2_train, Y_train)
 
-    def draw_output(self, X_train, Y_train):
+    def draw_output(self, X_train, A_train, Y_train):
         plt.axis('off')
         n_cols = 10
         n_rows = 3
@@ -142,12 +142,19 @@ class Agent():
             frame.axes.get_xaxis().set_visible(False)
             frame.axes.get_yaxis().set_visible(False)
             x = np.reshape(X_train[j], (20,10))
+            plt.title(POSSIBLE_MOVE_NAMES[np.where(A_train[j] == 1)[0]])
             plt.pcolor(x, cmap=plt.get_cmap('Greys'), vmin=-1, vmax=1)
+
+            frame = plt.subplot(n_cols,n_rows,3*i+2)
+            frame.axes.get_xaxis().set_visible(False)
+            frame.axes.get_yaxis().set_visible(False)
+            y = np.reshape(Y_train[j], (20,10))
+            plt.pcolor(y, cmap=plt.get_cmap('Greys'), vmin=-1, vmax=1)
 
             frame = plt.subplot(n_cols,n_rows,3*i+3)
             frame.axes.get_xaxis().set_visible(False)
             frame.axes.get_yaxis().set_visible(False)
-            y = np.reshape(self.model.predict(X_train[j]), (20,10))
+            y = np.reshape(self.model.predict(X_train[j], A_train[j]), (20,10))
             plt.pcolor(y, cmap=plt.get_cmap('Greys'), vmin=-1, vmax=1)
             if i == 0:
                 print(y)
@@ -170,14 +177,20 @@ class Agent():
     #             np.reshape(self.states_t1[indexes], (-1,self.output_size())))
 
     def training_data_for_indexes(self, indexes):
+        actions = np.array([np.array(POSSIBLE_MOVES == a, dtype=np.float32).flatten() for a in self.actions[indexes]])
         return (np.reshape(self.states_t0[indexes], (-1,200)),
+                actions,
                 np.reshape(self.states_t1[indexes], (-1,self.output_size())))
 
     def init_model(self):
+        n_filters = 128
+        n_cols = 3
+        n_rows = 3
+        layer1_input = n_filters * (20 - n_cols + 1) * (10 - n_rows + 1) + len(POSSIBLE_MOVES)
         self.model = tetris_theano.Model([
-                tetris_theano.Conv2DLayer(64, 4, 4),
+                tetris_theano.Conv2DLayer(n_filters, n_cols, n_rows),
                 tetris_theano.Flatten(),
-                tetris_theano.DenseLayer(64*17*7, 256),
-                tetris_theano.DenseLayer(256, self.output_size())
+                tetris_theano.Dropout(0.25),
+                tetris_theano.DenseLayer(layer1_input, self.output_size())
             ])
         self.model.compile()
