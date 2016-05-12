@@ -57,12 +57,27 @@ class Dropout(object):
             x /= retain_prob
         return x
 
+class ActionAdvantageMerge(object):
+    def output(self, A, V):
+        return V.repeat(3) + (A - T.mean(A).repeat(3))
+
+class Split(object):
+    def __init__(self, branch1, branch2, merger):
+        self.branch1 = Model(branch1)
+        self.branch2 = Model(branch2)
+        self.merger = merger
+        self.params = self.branch1.params + self.branch2.params
+
+    def output(self, x, a):
+        x1 = self.branch1.output(x, a)
+        x2 = self.branch2.output(x, a)
+        return self.merger.output(x1, x2)
+
 class Model(object):
 
-    def __init__(self, layers=None, learning_rate=0.01):
+    def __init__(self, layers=None):
         self.layers = []
         self.params = []
-        self.learning_rate = learning_rate
         if layers is not None:
             self.layers = layers
             for l in layers:
@@ -83,7 +98,7 @@ class Model(object):
     def squared_error(self, x, a, y):
         return T.sum((self.output(x, a) - y) ** 2)
 
-    def sgd(self, cost, params, lr=0.01):
+    def sgd(self, cost, params, lr=0.005):
         grads = T.grad(cost=cost, wrt=params)
         updates = []
         for p, g in zip(params, grads):
@@ -97,9 +112,10 @@ class Model(object):
         cost_function = self.squared_error(input, action, target)
         self.train_function = theano.function([input, action, target],
                                 cost_function,
-                                updates=self.sgd(cost_function, self.params, self.learning_rate))
+                                updates=self.sgd(cost_function, self.params),
+                                on_unused_input='ignore')
         output_function = self.output(input, action)
-        self.predict_function = theano.function([input, action], output_function)
+        self.predict_function = theano.function([input, action], output_function, on_unused_input='ignore')
 
     def train(self, X, A, Y, n_epochs):
         start = time.time()
