@@ -12,7 +12,7 @@ from offsets import *
 
 TIME_PER_TICK = 0
 TIME_BETWEEN_ROUNDS = 0.5
-N_ROLLING_AVG = 100
+N_ROLLING_AVG = 500
 
 ROTATE_LEFT = 0
 ROTATE_RIGHT = 1
@@ -32,16 +32,16 @@ MOVES_MAP = [ lambda x:x.rotate_left(),
               lambda x:None ]
 
 POSSIBLE_MOVE_NAMES = [
-    # "ROTATE_LEFT",
-    # "ROTATE_RIGHT",
+    "ROTATE_LEFT",
+    "ROTATE_RIGHT",
     "MOVE_RIGHT",
     "MOVE_LEFT",
     # "MOVE_DOWN",
     "DO_NOTHING" ]
 
 POSSIBLE_MOVES = np.array([
-    # ROTATE_LEFT,
-    # ROTATE_RIGHT,
+    ROTATE_LEFT,
+    ROTATE_RIGHT,
     MOVE_RIGHT,
     MOVE_LEFT,
     # MOVE_DOWN,
@@ -164,7 +164,7 @@ class Board:
         copy = np.array(self.board_array, copy=True, ndmin=3)
         if self.current_tetronimo is not None:
             for x, y, value in self.current_tetronimo.occupied_squares():
-                copy[0][y][x] = -2
+                copy[0][y][x] = -1
         return copy
 
 class Tetris:
@@ -181,7 +181,7 @@ class Tetris:
             self.init_colors()
         running_scores = deque([], N_ROLLING_AVG)
         n_games = 0
-        print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy, training_runs, epsilon')
+        print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy, training_runs, epsilon, n_pieces')
         while True:
             board = Board()
             continue_game = True
@@ -238,6 +238,7 @@ class Tetris:
                 n_pieces += 1
 
             running_scores.append(reward)
+            n_games += 1
             self.agent.n_games = n_games
             game_size = self.agent.current_game_length
             self.agent.game_over(reward)
@@ -245,22 +246,20 @@ class Tetris:
                 print_game_over(board, tetronimo, reward, screen)
             else:
                 avg = (sum(running_scores)/float(len(running_scores)))
-                n_games += 1
                 avg_q_value = 0
                 avg_loss = 0
                 avg_accuracy = 0
                 if len(self.agent.recent_q_values) > 0:
-                    avg_q_value = self.agent.recent_q_values[-1]
+                    avg_q_value = sum(self.agent.recent_q_values) / float(len(self.agent.recent_q_values))
                 if len(self.agent.recent_losses) > 0:
                     avg_loss = self.agent.recent_losses[-1]
                     avg_accuracy = self.agent.recent_accuracies[-1]
                 #print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy')
-                print('output: {}, {}, {}, {}, {}, {}, {}, {}'.format(n_games, reward, avg_q_value, n_cleared, avg_loss, avg_accuracy, 0, self.agent.epsilon()))
+                print('output: {}, {}, {}, {}, {}, {}, {}, {}, {}'.format(n_games, reward, avg_q_value, n_cleared, avg_loss, avg_accuracy, 0, self.agent.epsilon(), n_pieces))
 
 
     def reset_tetronimos(self):
         self.tetronimos = [T, L, J, O, I, S, Z, T, L, J, O, I, S, Z] # Official rules
-        # self.tetronimos = [O]
 
     def generate_tetronimo(self, board):
         if len(self.tetronimos) == 0:

@@ -27,20 +27,23 @@ class Flatten(object):
         self.params = []
 
     def output(self, x, a):
-        return T.flatten(T.concatenate([T.flatten(x), T.flatten(a)], axis=0))
+        return T.flatten(x)
 
 class Conv2DLayer(object):
-    def __init__(self, n_filters, n_cols, n_rows):
-        self.output_shape = (n_filters, 1, n_cols, n_rows)
+    def __init__(self, n_filters, n_cols, n_rows, n_inputs, width, height):
+        self.output_shape = (n_filters, n_inputs, n_cols, n_rows)
         m = 1 / math.sqrt(n_filters * n_cols * n_rows)
         W = (m * np.random.randn(*self.output_shape)).astype(theano.config.floatX)
         b = np.zeros((n_filters,)).astype(theano.config.floatX)
         self.W = theano.shared(value=W, name='W', borrow=True)
         self.b = theano.shared(value=b, name='b', borrow=True)
         self.params = [self.W, self.b]
+        self.width = width
+        self.height = height
+        self.n_inputs = n_inputs
 
     def output(self, x, a):
-        x = T.reshape(x, (1,1,20,10))
+        x = T.reshape(x, (-1, self.n_inputs, self.height, self.width))
         return T.tanh(conv2d(x, self.W) + self.b.dimshuffle('x', 0, 'x', 'x'))
 
 class Dropout(object):
@@ -59,7 +62,7 @@ class Dropout(object):
 
 class ActionAdvantageMerge(object):
     def output(self, A, V):
-        return V.repeat(3) + (A - T.mean(A).repeat(3))
+        return V.repeat(5) + (A - T.mean(A).repeat(5))
 
 class Split(object):
     def __init__(self, branch1, branch2, merger):
@@ -106,16 +109,20 @@ class Model(object):
         return updates
 
     def compile(self):
-        input = T.vector('input')
+        input = T.tensor3('input')
         action = T.vector('action')
         target = T.vector('target')
         cost_function = self.squared_error(input, action, target)
         self.train_function = theano.function([input, action, target],
                                 cost_function,
                                 updates=self.sgd(cost_function, self.params),
-                                on_unused_input='ignore')
+                                on_unused_input='ignore',
+                                allow_input_downcast=True)
         output_function = self.output(input, action)
-        self.predict_function = theano.function([input, action], output_function, on_unused_input='ignore')
+        self.predict_function = theano.function([input, action],
+                                                output_function,
+                                                on_unused_input='ignore',
+                                                allow_input_downcast=True)
 
     def train(self, X, A, Y, n_epochs):
         start = time.time()

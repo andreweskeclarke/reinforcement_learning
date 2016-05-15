@@ -29,7 +29,7 @@ ACTION_INDEX = 1
 REWARD_INDEX = 2
 STATE1_INDEX = 3
 
-BUFFER_SIZE = 1000
+BUFFER_SIZE = 15000
 DISCOUNT = 0.5
 BROADCAST_PORT = 50005
 
@@ -61,9 +61,9 @@ class Agent():
         self.rewards = np.zeros([BUFFER_SIZE], dtype=np.float32)
         self.current_episode_length = 0
         self.current_game_length = 0
-        self.recent_q_values = deque([], 10*N_REPLAYS_PER_ROUND)
-        self.recent_accuracies = deque([], 5*N_ROLLING_AVG)
-        self.recent_losses = deque([], 5*N_ROLLING_AVG)
+        self.recent_q_values = deque([], N_ROLLING_AVG)
+        self.recent_accuracies = deque([], N_ROLLING_AVG)
+        self.recent_losses = deque([], N_ROLLING_AVG)
         self.n_games = 0
         self.state_printer = StatePrinter()
         self.exploiting_turn = bool(random.getrandbits(1))
@@ -73,11 +73,15 @@ class Agent():
         return random.random() < self.epsilon()
 
     def epsilon(self):
-        return 0
+        return min([0.9, self.n_games / 100])
 
     def choose_action(self, state):
-        choice = random.choice(POSSIBLE_MOVES)
-        return choice
+        if self.exploit():
+            action = list([0,0,0])
+            q_values = self.model.predict(state, action)
+            self.recent_q_values.append(np.max(q_values))
+            return np.argmax(q_values)
+        return random.choice(POSSIBLE_MOVES)
         
     def last_n_indexes(self, n):
         if n == 0:
@@ -97,13 +101,14 @@ class Agent():
         self.state_printer.send_to_websocket(self.states_t1[self.current_pos - 1])
         indexes = self.last_n_indexes(self.current_game_length)
         total_reward_factor = 1.0 + (float(total_reward) * 0.05)
+        total_reward_factor = max(0.5, total_reward_factor)
         for i, index in enumerate(indexes):
             self.rewards[index] = self.rewards[index] * total_reward_factor
         self.experience_replay()
         self.current_game_length = 0
 
     def backup_episode(self, reward):
-        indexes = self.last_n_indexes(self.current_game_length)
+        indexes = self.last_n_indexes(self.current_episode_length)
         n_ineffective_actions = 0
         for i, index in enumerate(indexes):
             if np.array_equal(self.states_t0[index], self.states_t1[index]):
@@ -125,6 +130,7 @@ class Agent():
         self.tick_forward()
 
     def experience_replay(self):
+        sys.stdout.flush()
         if self.rolled_over_buffer:
             self.rolled_over_buffer = False
             mask = np.random.rand(BUFFER_SIZE) < 0.8
@@ -138,8 +144,8 @@ class Agent():
         return BOARD_HEIGHT*BOARD_WIDTH
 
     def training_data_for_indexes(self, indexes):
-        states = np.reshape(self.states_t0[indexes], (-1,200))
-        states_t1 = np.reshape(self.states_t1[indexes], (-1,200))
+        states = self.states_t0[indexes]
+        states_t1 = self.states_t1[indexes]
         rewards = self.rewards[indexes]
         actions = np.array([np.array(POSSIBLE_MOVES == a, dtype=np.float32).flatten() for a in self.actions[indexes]])
         outputs = list() 
@@ -152,19 +158,22 @@ class Agent():
             future_reward = DISCOUNT*(np.amax(next_q_values))
             y[np.where(action == 1)[0]] = rewards[i] + future_reward
             outputs.append(y)
-        outputs = np.array(outputs)   
+        outputs = np.array(outputs)
         return (states, actions, outputs)
 
     def init_model(self):
-        n_filters = 64
-        n_cols = 3
-        n_rows = 3
-        layer1_input = n_filters * (20 - n_cols + 1) * (10 - n_rows + 1) + len(POSSIBLE_MOVES)
+        layer1_input = 128 * (12) * (2)
         self.model = tetris_theano.Model([
-                tetris_theano.Conv2DLayer(n_filters, n_cols, n_rows),
+                tetris_theano.Conv2DLayer(32, 3, 3, 1, 10, 20),
+                tetris_theano.Conv2DLayer(32, 3, 3, 32, 8, 18),
+                tetris_theano.Conv2DLayer(64, 3, 3, 32, 6, 16),
+                tetris_theano.Conv2DLayer(128, 2, 2, 64, 4, 14),
+                tetris_theano.Conv2DLayer(128, 2, 2, 128, 3, 13),
                 tetris_theano.Flatten(),
-                tetris_theano.Split([tetris_theano.DenseLayer(layer1_input, len(POSSIBLE_MOVES))],
-                                    [tetris_theano.DenseLayer(layer1_input, 1)],
+                tetris_theano.Split([tetris_theano.DenseLayer(layer1_input, 256),
+                                     tetris_theano.DenseLayer(256, len(POSSIBLE_MOVES))],
+                                    [tetris_theano.DenseLayer(layer1_input, 256),
+                                     tetris_theano.DenseLayer(256, 1)],
                                     tetris_theano.ActionAdvantageMerge())
             ])
         self.model.compile()
