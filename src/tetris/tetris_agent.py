@@ -30,8 +30,8 @@ REWARD_INDEX = 2
 STATE1_INDEX = 3
 
 BUFFER_SIZE = 15000
-DISCOUNT = 0.5
-BROADCAST_PORT = 50005
+DISCOUNT = 0.4
+BROADCAST_PORT = 50006
 
 DEBUG=False
 
@@ -128,12 +128,13 @@ class Agent():
         self.rewards[self.current_pos] = 0
         self.states_t1[self.current_pos] = state1
         self.tick_forward()
+        self.state_printer.send_to_websocket(self.states_t1[self.current_pos - 1])
 
     def experience_replay(self):
         sys.stdout.flush()
         if self.rolled_over_buffer:
             self.rolled_over_buffer = False
-            mask = np.random.rand(BUFFER_SIZE) < 0.8
+            mask = np.random.rand(BUFFER_SIZE) < 0.3
             X1_train, X2_train, Y_train = self.training_data_for_indexes(mask)
             self.model.train(X1_train, X2_train, Y_train, 1)
 

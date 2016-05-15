@@ -36,7 +36,7 @@ POSSIBLE_MOVE_NAMES = [
     "ROTATE_RIGHT",
     "MOVE_RIGHT",
     "MOVE_LEFT",
-    # "MOVE_DOWN",
+    "MOVE_DOWN",
     "DO_NOTHING" ]
 
 POSSIBLE_MOVES = np.array([
@@ -44,7 +44,7 @@ POSSIBLE_MOVES = np.array([
     ROTATE_RIGHT,
     MOVE_RIGHT,
     MOVE_LEFT,
-    # MOVE_DOWN,
+    MOVE_DOWN,
     DO_NOTHING ],np.int8)
 
 class Tetromino:
