@@ -1,3 +1,3 @@
 #! /bin/bash
 
-socat -u udp-recv:50005,reuseaddr -
+socat -u udp-recv:50006,reuseaddr -

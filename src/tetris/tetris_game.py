@@ -215,11 +215,11 @@ class Tetris:
                             n_cleared += lines_cleared
                     else:
                         MOVES_MAP[action](tetronimo)
-                        # if plays_since_tick_counter >= 5:
-                        #     new_reward, lines_cleared = board.tick()
-                        #     reward += new_reward
-                        #     episode_reward += new_reward
-                        #     n_cleared += lines_cleared
+                        if plays_since_tick_counter >= 6:
+                            new_reward, lines_cleared = board.tick()
+                            reward += new_reward
+                            episode_reward += new_reward
+                            n_cleared += lines_cleared
 
                     continue_episode = not board.current_tetronimo_settled()
                     if continue_episode:

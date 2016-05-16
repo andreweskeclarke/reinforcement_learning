@@ -49,6 +49,7 @@ class StatePrinter:
     def send_to_websocket(self, state):
         data = bytes("|".join([",".join(map(str, x)) for x in state[0]]) + "\n", 'ascii')
         self.sock.sendto(data, ("<broadcast>", BROADCAST_PORT))
+        sys.stdout.flush()
 
 class Agent():
     def __init__(self):
@@ -73,16 +74,16 @@ class Agent():
         return random.random() < self.epsilon()
 
     def epsilon(self):
-        return min([0.9, self.n_games / 100])
+        return min([0.9, self.n_games / 50])
 
     def choose_action(self, state):
-        if self.exploit():
-            action = list([0,0,0])
-            q_values = self.model.predict(state, action)
-            self.recent_q_values.append(np.max(q_values))
-            return np.argmax(q_values)
-        return random.choice(POSSIBLE_MOVES)
-        
+        if self.exploiting_turn: 
+            return random.choice(POSSIBLE_MOVES)
+        action = np.zeros(len(POSSIBLE_MOVES))
+        q_values = self.model.predict(state, action)
+        self.recent_q_values.append(np.max(q_values))
+        return np.argmax(q_values)
+
     def last_n_indexes(self, n):
         if n == 0:
             indexes = [(self.current_pos - 1) % BUFFER_SIZE]
@@ -132,7 +133,7 @@ class Agent():
 
     def experience_replay(self):
         sys.stdout.flush()
-        if self.rolled_over_buffer:
+        if self.n_games > 0 and self.n_games % 5 == 0:
             self.rolled_over_buffer = False
             mask = np.random.rand(BUFFER_SIZE) < 0.3
             X1_train, X2_train, Y_train = self.training_data_for_indexes(mask)

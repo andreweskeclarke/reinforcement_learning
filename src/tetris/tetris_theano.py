@@ -6,6 +6,7 @@ import timeit
 import numpy as np
 import theano
 import theano.tensor as T
+from tetris_game import POSSIBLE_MOVES
 from theano.tensor.nnet.conv import conv2d
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 import math
@@ -62,7 +63,7 @@ class Dropout(object):
 
 class ActionAdvantageMerge(object):
     def output(self, A, V):
-        return V.repeat(5) + (A - T.mean(A).repeat(5))
+        return V.repeat(len(POSSIBLE_MOVES)) + (A - T.mean(A).repeat(len(POSSIBLE_MOVES)))
 
 class Split(object):
     def __init__(self, branch1, branch2, merger):
