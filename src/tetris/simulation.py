@@ -7,6 +7,8 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser(description='Run a tetris simulation')
+    parser.add_argument('--agent', help='Which agent to run')
+    parser.add_argument('--model', help='Which network architecture to run')
     parser.add_argument('--watch', action='store_true', help='Run the newest models')
     args = parser.parse_args()
 
@@ -14,6 +16,7 @@ def main():
         a = GreedyAgent()
         Tetris(a).play()
     else:
+        agent = Agents[args.agent]
         a = Agent()
         Tetris(a).play()
 
