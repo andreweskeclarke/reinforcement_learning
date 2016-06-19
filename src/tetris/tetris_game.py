@@ -182,7 +182,7 @@ class Tetris:
         running_scores = deque([], N_ROLLING_AVG)
         n_games = 0
         print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy, training_runs, epsilon, n_pieces')
-        while True:
+        while self.agent.should_continue():
             board = Board()
             continue_game = True
             self.reset_tetronimos()
@@ -249,9 +249,9 @@ class Tetris:
                 avg_q_value = 0
                 avg_loss = 0
                 avg_accuracy = 0
-                if len(self.agent.recent_q_values) > 0:
+                if hasattr(self.agent, 'recent_q_values') and len(self.agent.recent_q_values) > 0:
                     avg_q_value = sum(self.agent.recent_q_values) / float(len(self.agent.recent_q_values))
-                if len(self.agent.recent_losses) > 0:
+                if hasattr(self.agent, 'recent_losses') and len(self.agent.recent_losses) > 0:
                     avg_loss = self.agent.recent_losses[-1]
                     avg_accuracy = self.agent.recent_accuracies[-1]
                 #print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy')

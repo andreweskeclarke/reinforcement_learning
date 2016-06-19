@@ -9,7 +9,9 @@ import theano.tensor as T
 from tetris_game import POSSIBLE_MOVES
 from theano.tensor.nnet.conv import conv2d
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
+from theano.tensor.signal import downsample
 import math
+
 
 class DenseLayer(object):
     def __init__(self, n_input, n_output):
@@ -23,12 +25,14 @@ class DenseLayer(object):
     def output(self, x, a):
         return T.tanh(T.dot(self.W, x) + self.b)
 
+
 class Flatten(object):
     def __init__(self):
         self.params = []
 
     def output(self, x, a):
-        return T.flatten(x)
+        return x.flatten(2)
+
 
 class Conv2DLayer(object):
     def __init__(self, n_filters, n_cols, n_rows, n_inputs, width, height):
@@ -47,6 +51,7 @@ class Conv2DLayer(object):
         x = T.reshape(x, (-1, self.n_inputs, self.height, self.width))
         return T.tanh(conv2d(x, self.W) + self.b.dimshuffle('x', 0, 'x', 'x'))
 
+
 class Dropout(object):
     def __init__(self, p=0.5):
         self.p = p
@@ -61,9 +66,22 @@ class Dropout(object):
             x /= retain_prob
         return x
 
+
+class StateAndActionMerge(object):
+    def __init__(self):
+        self.params = []
+
+    def output(self, x, a):
+        return T.concatenate([x.flatten(), a.flatten()])
+
+
 class ActionAdvantageMerge(object):
+    def __init__(self):
+        self.params = []
+
     def output(self, A, V):
         return V.repeat(len(POSSIBLE_MOVES)) + (A - T.mean(A).repeat(len(POSSIBLE_MOVES)))
+
 
 class Split(object):
     def __init__(self, branch1, branch2, merger):
@@ -77,8 +95,16 @@ class Split(object):
         x2 = self.branch2.output(x, a)
         return self.merger.output(x1, x2)
 
-class Model(object):
 
+class MaxPooling(object):
+    def __init__(self, shape):
+        self.params = []
+
+    def output(self, x, a):
+        return downsample.max_pool_2d(input, maxpool_shape, ignore_border=True)
+
+
+class Model(object):
     def __init__(self, layers=None):
         self.layers = []
         self.params = []
@@ -110,17 +136,17 @@ class Model(object):
         return updates
 
     def compile(self):
-        input = T.tensor3('input')
-        action = T.vector('action')
-        target = T.vector('target')
-        cost_function = self.squared_error(input, action, target)
-        self.train_function = theano.function([input, action, target],
+        x_train = T.tensor3('x_train')
+        actions = T.vector('actions')
+        y_train = T.vector('y_train')
+        cost_function = self.squared_error(x_train, actions, y_train)
+        self.train_function = theano.function([x_train, actions, y_train],
                                 cost_function,
                                 updates=self.sgd(cost_function, self.params),
                                 on_unused_input='ignore',
                                 allow_input_downcast=True)
-        output_function = self.output(input, action)
-        self.predict_function = theano.function([input, action],
+        output_function = self.output(x_train, actions)
+        self.predict_function = theano.function([x_train, actions],
                                                 output_function,
                                                 on_unused_input='ignore',
                                                 allow_input_downcast=True)

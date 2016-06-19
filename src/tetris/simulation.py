@@ -5,6 +5,13 @@ from tetris_game import *
 from tetris_agent import *
 import argparse
 
+
+AGENTS = {
+    'reinforcement': ReinforcementAgent,
+    'random': RandomAgent,
+    'piece_prediction': PiecePredictionAgent,
+}
+
 def main():
     parser = argparse.ArgumentParser(description='Run a tetris simulation')
     parser.add_argument('--agent', help='Which agent to run')
@@ -16,9 +23,8 @@ def main():
         a = GreedyAgent()
         Tetris(a).play()
     else:
-        agent = Agents[args.agent]
-        a = Agent()
-        Tetris(a).play()
+        agent = AGENTS[args.agent](args.model)
+        Tetris(agent).play()
 
 if __name__ == "__main__":
     main()
