@@ -233,7 +233,7 @@ class PiecePredictionAgent(Agent):
         n_cols = 3
         plt.figure(figsize=(n_cols,n_rows))
         for i in range(0,n_rows):
-            index = random.randint(0,Y_train.shape[0])
+            index = random.randint(0,Y_train.shape[0]-1)
             x = X1_train[index].reshape(20,10)
             action = X2_train[index]
             y = Y_train[index].reshape(20,10)
