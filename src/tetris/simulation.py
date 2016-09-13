@@ -14,9 +14,9 @@ AGENTS = {
 
 def main():
     parser = argparse.ArgumentParser(description='Run a tetris simulation')
-    parser.add_argument('--agent', help='Which agent to run')
-    parser.add_argument('--model', help='Which network architecture to run')
-    parser.add_argument('--watch', action='store_true', help='Run the newest models')
+    parser.add_argument('--agent', help='Which agent to run', required=True)
+    parser.add_argument('--model', help='Which network architecture to run', required=True)
+    parser.add_argument('--watch', action='store_true', help='Run the newest models', required=False, default=False)
     args = parser.parse_args()
 
     if args.watch:

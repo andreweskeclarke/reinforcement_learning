@@ -226,10 +226,11 @@ class Tetris:
                         state_t1 = board.copy_board_state()
                         self.agent.handle(state_t0, action, episode_reward, state_t1)
                     else:
-                        tetronimo = self.generate_tetronimo(board)
-                        could_add_more = board.add_tetronimo(tetronimo)
                         state_t1 = board.copy_board_state()
                         self.agent.handle(state_t0, action, episode_reward, state_t1)
+
+                        tetronimo = self.generate_tetronimo(board)
+                        could_add_more = board.add_tetronimo(tetronimo)
                         if not could_add_more:
                             episode_reward = -4
                         continue_game = could_add_more and n_pieces < 50

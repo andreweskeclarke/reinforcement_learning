@@ -13,6 +13,7 @@ import datetime
 import time
 
 from tetris_game import *
+from tetris_game import BOARD_WIDTH, BOARD_HEIGHT
 from collections import deque
 
 # SARS - [State_0, Action, Reward, State_1]
@@ -22,7 +23,7 @@ REWARD_INDEX = 2
 STATE1_INDEX = 3
 
 N_REPLAYS_PER_ROUND = 2000
-BUFFER_SIZE = 1000
+BUFFER_SIZE = 5000
 DISCOUNT = 0.5
 BROADCAST_PORT = 50005
 DEBUG=False
@@ -201,11 +202,11 @@ class RandomAgent(Agent):
 class PiecePredictionAgent(Agent):
     def __init__(self, model_name, max_training_batches=100):
         super().__init__(model_name, max_training_batches)
-        self.directory = '/Users/andrew/tmp/piece_prediction/{}'.format(self.model_name)
+        self.directory = '/home/aclarke/tmp/tprediction/{}'.format(self.model_name)
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)
         with open(os.path.join(self.directory, 'stats.csv'), 'w+') as f:
-            f.write('batch,cost')
+            f.write('batch,cost\n')
 
     def choose_action(self, state):
         return random.choice(POSSIBLE_MOVES)
@@ -215,49 +216,54 @@ class PiecePredictionAgent(Agent):
 
     def rolled_over(self):
         start = time.time()
-        print('Training batch {} of {} with {}...'.format(self.n_training_batches,
-            self.max_training_batches,
-            self.model_name))
-        mask = np.random.rand(BUFFER_SIZE) < 0.8
-        X1_train, X2_train, Y_train = self.training_data_for_indexes(mask)
-        Y_train = Y_train.reshape((Y_train.shape[0],200))
-        cost = self.model.train(X1_train, X2_train, Y_train, 1)
-        print('Trained batch {} of {} with {} in {:.2f}s'.format(self.n_training_batches,
-            self.max_training_batches,
-            self.model_name,
-            time.time() - start))
-        print('{} mean error'.format(math.sqrt(cost)))
-
-        plt.axis('off')
         n_rows = 20
         n_cols = 3
-        plt.figure(figsize=(n_cols,n_rows))
-        for i in range(0,n_rows):
-            index = random.randint(0,Y_train.shape[0]-1)
-            x = X1_train[index].reshape(20,10)
-            action = X2_train[index]
-            y = Y_train[index].reshape(20,10)
-            y_pre = self.model.predict(X1_train[index], X2_train[index]).reshape(20,10)
-            frame = plt.subplot(n_rows,n_cols,3*i+1)
-            frame.axes.get_xaxis().set_visible(False)
-            frame.axes.get_yaxis().set_visible(False)
-            plt.pcolor(x, cmap=plt.get_cmap('Greys'))
+        indexes = [random.randint(0,BUFFER_SIZE) for i in range(0,n_rows)]
+        indexes_mask = np.array([1 if i in indexes else 0 for i in range(0,BUFFER_SIZE)], dtype='bool')
 
-            frame = plt.subplot(n_rows,n_cols,3*i+2)
-            frame.axes.get_xaxis().set_visible(False)
-            frame.axes.get_yaxis().set_visible(False)
-            plt.pcolor(y, cmap=plt.get_cmap('Greys'))
+        i = 0
+        while True:
+            print('Training batch {} ({} of {}) with {}...'.format(i,
+                self.n_training_batches,
+                self.max_training_batches,
+                self.model_name))
+            mask = np.random.rand(BUFFER_SIZE) < 1
+            X1_train, X2_train, Y_train = self.training_data_for_indexes(mask)
+            Y_train = Y_train.reshape((Y_train.shape[0],BOARD_HEIGHT*BOARD_WIDTH))
+            cost = self.model.train(X1_train, X2_train, Y_train, 1)
+            print('{} mean error'.format(math.sqrt(cost)))
+            if i % 25 == 0:
+                plt.axis('off')
+                plt.figure(figsize=(n_cols,n_rows))
+                X1_sample, X2_sample, Y_sample = self.training_data_for_indexes(indexes_mask)
+                for index, _ in enumerate(X1_sample):
+                    x = X1_sample[index]
+                    action = X2_sample[index]
+                    y = Y_sample[index]
+                    y_pre = self.model.predict(x, action).reshape(BOARD_HEIGHT,BOARD_WIDTH)
+                    frame = plt.subplot(n_rows,n_cols,3*index+1)
+                    frame.axes.get_xaxis().set_visible(False)
+                    frame.axes.get_yaxis().set_visible(False)
+                    plt.pcolor(x.reshape(BOARD_HEIGHT,BOARD_WIDTH), cmap=plt.get_cmap('Greys'), vmin=-1, vmax=1)
 
-            frame = plt.subplot(n_rows,n_cols,3*i+3)
-            frame.axes.get_xaxis().set_visible(False)
-            frame.axes.get_yaxis().set_visible(False)
-            plt.pcolor(y_pre, cmap=plt.get_cmap('Greys'))
+                    frame = plt.subplot(n_rows,n_cols,3*index+2)
+                    frame.axes.get_xaxis().set_visible(False)
+                    frame.axes.get_yaxis().set_visible(False)
+                    plt.pcolor(y.reshape(BOARD_HEIGHT,BOARD_WIDTH), cmap=plt.get_cmap('Greys'), vmin=-1, vmax=1)
 
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.directory, 'piece_predicton_{}.png'.format(
-            datetime.datetime.today().strftime('%Y%m%dT%H%M%S'))))
+                    frame = plt.subplot(n_rows,n_cols,3*index+3)
+                    frame.axes.get_xaxis().set_visible(False)
+                    frame.axes.get_yaxis().set_visible(False)
+                    plt.pcolor(y_pre, cmap=plt.get_cmap('Greys'), vmin=-1, vmax=1)
+
+                plt.tight_layout()
+                plt.savefig(os.path.join(self.directory, 'piece_predicton_{}.png'.format(
+                    datetime.datetime.today().strftime('%Y%m%dT%H%M%S'))))
+                plt.close('all')
+            i += 1
+
         with open(os.path.join(self.directory, 'stats.csv'), 'a') as f:
-            f.write('{},{}'.format(self.n_training_batches, cost))
+            f.write('{},{}\n'.format(self.n_training_batches, cost))
         self.n_training_batches += 1
 
     def on_episode_end(self, reward):
