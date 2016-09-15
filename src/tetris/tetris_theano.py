@@ -31,7 +31,7 @@ class Flatten(object):
         self.params = []
 
     def output(self, x, a):
-        return x.flatten(2)
+        return x.flatten()
 
 
 class Conv2DLayer(object):

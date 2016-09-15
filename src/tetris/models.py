@@ -10,6 +10,7 @@ def compile(model_name):
         'single_layer_piece_prediction': single_layer_piece_prediction,
         'super_deep_piece_prediction': super_deep_piece_prediction,
         'dense_piece_prediction': dense_piece_prediction,
+        'dense_value_prediction': dense_value_prediction,
     }[model_name]()
 
 
@@ -50,7 +51,6 @@ def dqn():
 def single_layer_piece_prediction():
     layer1_input = BOARD_WIDTH*BOARD_HEIGHT + len(POSSIBLE_MOVES)
     model = tetris_theano.Model([
-            tetris_theano.Flatten(),
             tetris_theano.StateAndActionMerge(),
             tetris_theano.DenseLayer(layer1_input, 256),
             tetris_theano.DenseLayer(256, BOARD_WIDTH*BOARD_HEIGHT)
@@ -59,9 +59,24 @@ def single_layer_piece_prediction():
     return model
 
 
+def dense_value_prediction():
+    layer1_input = BOARD_HEIGHT * BOARD_WIDTH
+    model = tetris_theano.Model([
+            tetris_theano.Flatten(),
+            tetris_theano.DenseLayer(layer1_input, 1024),
+            tetris_theano.DenseLayer(1024, 1024),
+            tetris_theano.DenseLayer(1024, 512),
+            tetris_theano.DenseLayer(512, 512),
+            tetris_theano.DenseLayer(512, 512),
+            tetris_theano.DenseLayer(512, 1)
+        ])
+    model.compile()
+    return model
+
 def dense_piece_prediction():
     layer1_input = len(POSSIBLE_MOVES) + BOARD_HEIGHT * BOARD_WIDTH
     model = tetris_theano.Model([
+            tetris_theano.Flatten(),
             tetris_theano.StateAndActionMerge(),
             tetris_theano.DenseLayer(layer1_input, 1024),
             tetris_theano.DenseLayer(1024, 1024),

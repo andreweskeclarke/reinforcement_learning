@@ -106,11 +106,49 @@ class Agent():
         self.states_t1[self.current_pos] = state1
         self.tick_forward()
 
-    def init_model(self, model):
-        self.model = models.compile(model)
+    def init_model(self, model_name):
+        self.model = models.compile(model_name)
 
     def should_continue(self):
         return self.n_training_batches < self.max_training_batches
+
+    def create_sample_images(self, indexes_mask):
+        n_rows = np.sum(indexes_mask)
+        n_cols = 3
+        plt.axis('off')
+        plt.figure(figsize=(n_cols,n_rows))
+        X1_sample, X2_sample, Y_sample = self.training_data_for_indexes(indexes_mask)
+        for index, _ in enumerate(X1_sample):
+            x = X1_sample[index]
+            action = X2_sample[index]
+            y = Y_sample[index]
+            y_pre = self.model.predict(x, action).reshape(BOARD_HEIGHT,BOARD_WIDTH)
+            frame = plt.subplot(n_rows,n_cols,3*index+1)
+            frame.axes.get_xaxis().set_visible(False)
+            frame.axes.get_yaxis().set_visible(False)
+            plt.pcolor(x.reshape(BOARD_HEIGHT,BOARD_WIDTH), cmap=plt.get_cmap('Greys'), vmin=-1, vmax=1)
+
+            frame = plt.subplot(n_rows,n_cols,3*index+2)
+            frame.axes.get_xaxis().set_visible(False)
+            frame.axes.get_yaxis().set_visible(False)
+            plt.pcolor(y.reshape(BOARD_HEIGHT,BOARD_WIDTH), cmap=plt.get_cmap('Greys'), vmin=-1, vmax=1)
+
+            frame = plt.subplot(n_rows,n_cols,3*index+3)
+            frame.axes.get_xaxis().set_visible(False)
+            frame.axes.get_yaxis().set_visible(False)
+            plt.pcolor(y_pre, cmap=plt.get_cmap('Greys'), vmin=-1, vmax=1)
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.directory, 'piece_predicton_{}.png'.format(
+            datetime.datetime.today().strftime('%Y%m%dT%H%M%S'))))
+        plt.close('all')
+
+    def training_data_for_indexes(self, indexes):
+        states = self.states_t0[indexes]
+        states_t1 = self.states_t1[indexes]
+        actions = self.actions_by_index(indexes)
+        return (states, actions, states_t1)
+
 
 class ReinforcementAgent(Agent):
     def __init__(self, model_name):
@@ -144,7 +182,7 @@ class ReinforcementAgent(Agent):
         self.experience_replay()
         self.current_game_length = 0
 
-    def backup_episode(self, reward):
+    def store_episode_information(self, reward):
         indexes = self.last_n_indexes(self.current_episode_length)
         n_ineffective_actions = 0
         for i, index in enumerate(indexes):
@@ -156,13 +194,13 @@ class ReinforcementAgent(Agent):
         self.current_episode_length = 0
 
     def on_episode_end(self, reward):
-        self.backup_episode(reward)
+        self.store_episode_information(reward)
         self.exploiting_turn = self.exploit()
 
     def experience_replay(self):
         sys.stdout.flush()
         if self.n_games > 0 and self.n_games % 5 == 0:
-            mask = np.random.rand(min(self.min_pos, BUFFER_SIZE)) < 0.3
+            mask = np.random.rand(min(0, BUFFER_SIZE)) < 0.3
             X1_train, X2_train, Y_train = self.training_data_for_indexes(mask)
             self.model.train(X1_train, X2_train, Y_train, 1)
 
@@ -184,6 +222,101 @@ class ReinforcementAgent(Agent):
         outputs = np.array(outputs)
         return (states, actions, outputs)
 
+
+class StateValueAgent(ReinforcementAgent):
+    def __init__(self, state_model_name, value_model_name):
+        super().__init__(state_model_name)
+        self.state_predictor = models.compile(state_model_name)
+        self.value_predictor = models.compile(value_model_name)
+        self.recent_q_values = deque([], N_ROLLING_AVG)
+        self.recent_accuracies = deque([], N_ROLLING_AVG)
+        self.recent_losses = deque([], N_ROLLING_AVG)
+        self.exploiting_turn = bool(random.getrandbits(1))
+
+    def exploit(self):
+        return random.random() < self.epsilon()
+
+    def epsilon(self):
+        return 0.9
+
+    def choose_action(self, state):
+        if not self.exploiting_turn: 
+            return random.choice(POSSIBLE_MOVES)
+        action = np.zeros(len(POSSIBLE_MOVES))
+        q_values = []
+        for i, move in enumerate(POSSIBLE_MOVES):
+            action = np.zeros(len(POSSIBLE_MOVES))
+            action[i] = 1
+            predicted_state = self.state_predictor.predict(state, action).reshape(1,1,BOARD_WIDTH*BOARD_HEIGHT)
+            q_values.append(self.value_predictor.predict(predicted_state, action)[i])
+
+        self.recent_q_values.append(np.max(q_values))
+        return np.argmax(q_values)
+
+    def update_final_rewards(self, total_reward):
+        total_reward_factor = 1.0 + (float(total_reward) * 0.05)
+        total_reward_factor = max(0.5, total_reward_factor)
+        for index in self.last_n_indexes(self.current_game_length):
+            self.rewards[index] = self.rewards[index] * total_reward_factor
+
+    def game_over(self, total_reward):
+        self.state_printer.print(self.states_t1[self.current_pos - 1])
+        self.update_final_rewards(total_reward)
+        self.experience_replay()
+        self.current_game_length = 0
+
+    def store_episode_information(self, reward):
+        n_ineffective_actions = 0
+        for i, index in enumerate(self.last_n_indexes(self.current_episode_length)):
+            if np.array_equal(self.states_t0[index], self.states_t1[index]):
+                n_ineffective_actions += 1
+                self.rewards[index] = 0
+            else:
+                self.rewards[index] += float(reward) * (DISCOUNT**(i - n_ineffective_actions))
+        self.current_episode_length = 0
+
+    def on_episode_end(self, reward):
+        self.store_episode_information(reward)
+        self.exploiting_turn = self.exploit()
+
+    def experience_replay(self):
+        sys.stdout.flush()
+        if self.n_games > 0 and self.n_games % 5 == 0:
+            self.train(0.3)
+
+    def rolled_over(self):
+        for i in range(0,10):
+            self.train(0.8)
+
+    def train(self, percent=0.8):
+        mask = np.random.rand(BUFFER_SIZE) < percent
+        X_state, X_action, Y_state = self.state_training_data_for_indexes(mask)
+        Y_state = Y_state.reshape((Y_state.shape[0],BOARD_HEIGHT*BOARD_WIDTH))
+        state_cost = self.state_predictor.train(X_state, X_action, Y_state, 1)
+        print('state mean error: {}'.format(math.sqrt(state_cost)))
+
+        X_state, Y_value = self.value_training_data_for_indexes(mask)
+        value_cost = self.value_predictor.train(X_state, np.array([]), Y_value, 1)
+        print('value mean error: {}'.format(math.sqrt(value_cost)))
+
+    def state_training_data_for_indexes(self, indexes):
+        return (self.states_t0[indexes],
+                self.actions_by_index(indexes),
+                self.states_t1[indexes])
+
+    def value_training_data_for_indexes(self, indexes):
+        states = self.states_t0[indexes]
+        discounted_rewards = list() 
+        for i in range(0, states.shape[0]):
+            state = states[i]
+            action = np.zeros(len(POSSIBLE_MOVES))
+            action[i] = 1
+            state_t1 = self.state_predictor.predict(state, action)
+            future_reward = self.value_predictor.predict(state_t1, action) # Ignores the action
+
+            discounted_rewards.append(self.rewards[i] + DISCOUNT * future_reward)
+        discounted_rewards = np.array(discounted_rewards)
+        return (states, discounted_rewards)
 
 class RandomAgent(Agent):
     def __init__(self, model_name):
@@ -216,9 +349,7 @@ class PiecePredictionAgent(Agent):
 
     def rolled_over(self):
         start = time.time()
-        n_rows = 20
-        n_cols = 3
-        indexes = [random.randint(0,BUFFER_SIZE) for i in range(0,n_rows)]
+        indexes = [random.randint(0,BUFFER_SIZE) for i in range(0,20)]
         indexes_mask = np.array([1 if i in indexes else 0 for i in range(0,BUFFER_SIZE)], dtype='bool')
 
         i = 0
@@ -233,33 +364,7 @@ class PiecePredictionAgent(Agent):
             cost = self.model.train(X1_train, X2_train, Y_train, 1)
             print('{} mean error'.format(math.sqrt(cost)))
             if i % 25 == 0:
-                plt.axis('off')
-                plt.figure(figsize=(n_cols,n_rows))
-                X1_sample, X2_sample, Y_sample = self.training_data_for_indexes(indexes_mask)
-                for index, _ in enumerate(X1_sample):
-                    x = X1_sample[index]
-                    action = X2_sample[index]
-                    y = Y_sample[index]
-                    y_pre = self.model.predict(x, action).reshape(BOARD_HEIGHT,BOARD_WIDTH)
-                    frame = plt.subplot(n_rows,n_cols,3*index+1)
-                    frame.axes.get_xaxis().set_visible(False)
-                    frame.axes.get_yaxis().set_visible(False)
-                    plt.pcolor(x.reshape(BOARD_HEIGHT,BOARD_WIDTH), cmap=plt.get_cmap('Greys'), vmin=-1, vmax=1)
-
-                    frame = plt.subplot(n_rows,n_cols,3*index+2)
-                    frame.axes.get_xaxis().set_visible(False)
-                    frame.axes.get_yaxis().set_visible(False)
-                    plt.pcolor(y.reshape(BOARD_HEIGHT,BOARD_WIDTH), cmap=plt.get_cmap('Greys'), vmin=-1, vmax=1)
-
-                    frame = plt.subplot(n_rows,n_cols,3*index+3)
-                    frame.axes.get_xaxis().set_visible(False)
-                    frame.axes.get_yaxis().set_visible(False)
-                    plt.pcolor(y_pre, cmap=plt.get_cmap('Greys'), vmin=-1, vmax=1)
-
-                plt.tight_layout()
-                plt.savefig(os.path.join(self.directory, 'piece_predicton_{}.png'.format(
-                    datetime.datetime.today().strftime('%Y%m%dT%H%M%S'))))
-                plt.close('all')
+                self.create_sample_images(indexes_mask)
             i += 1
 
         with open(os.path.join(self.directory, 'stats.csv'), 'a') as f:
@@ -269,9 +374,3 @@ class PiecePredictionAgent(Agent):
     def on_episode_end(self, reward):
         self.state_printer.print(self.states_t1[self.current_pos - 1])
         sys.stdout.flush()
-
-    def training_data_for_indexes(self, indexes):
-        states = self.states_t0[indexes]
-        states_t1 = self.states_t1[indexes]
-        actions = self.actions_by_index(indexes)
-        return (states, actions, states_t1)
