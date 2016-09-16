@@ -2,7 +2,10 @@ import queue
 import threading
 import time
 from tetris_game import *
-from tetris_agent import *
+from agents.tetris_agent import *
+from agents.reinforcement_agent import *
+from agents.state_value_agent import *
+from agents.piece_prediction_agent import *
 import argparse
 
 
