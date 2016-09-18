@@ -40,7 +40,7 @@ class PiecePredictionAgent(Agent):
             f.write('{},{}\n'.format(self.n_training_batches, cost))
         self.n_training_batches += 1
 
-    def on_episode_end(self, reward):
+    def on_episode_end(self, reward, episode_length):
         self.state_printer.print(self.states_t1[self.current_pos - 1])
         sys.stdout.flush()
 

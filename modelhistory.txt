@@ -1,0 +1,148 @@
+Notes around Models
+
+===================== 03/15
+self.model = Sequential()
+self.model.add(Convolution2D(16, 5, 5,
+                             activation='tanh',
+                             subsample=(1,1),
+                             init='uniform',
+                             input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+self.model.add(Flatten())
+self.model.add(Dropout(0.5))
+self.model.add(Dense(64, activation='tanh', init='uniform'))
+self.model.add(Dropout(0.5))
+self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
+optim = SGD(lr=0.1, decay=0.0, momentum=0.5, nesterov=True)
+self.model.compile(loss='mae', optimizer=optim)
+		 
+Loss - linear decreasing, until convergence around 1500 games, 25 million training epochs
+Score - flatlines, high variance (between -1 and -3.5)
+Q-Value - flatlines, (6.4 - 7.2)
+Notes - Good learning of scores, but bad policy - Absolutely no lines were filled over 3,000 games. Played around 24 hours
+
+====================== 03/15
+self.model = Sequential()
+self.model.add(Convolution2D(64, 5, 5,
+                              activation='tanh',
+                              subsample=(1,1),
+                              init='uniform',
+                              input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+self.model.add(Flatten())
+self.model.add(Dropout(0.5))
+self.model.add(Dense(128, activation='tanh', init='uniform'))
+self.model.add(Dropout(0.5))
+self.model.add(Dense(128, activation='tanh', init='uniform'))
+self.model.add(Dropout(0.5))
+self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
+optim = SGD(lr=0.02, momentum=0.0, decay=0.0, nesterov=True)
+self.model.compile(loss='mse', optimizer=optim)
+
+Loss - Diverged after 10,000 or so games, exponential increase
+Score - Steadily, sightly decreasing, possibly variance from 4 to 0
+Q-Value - Diverges, exponential increase
+Notes - Good policy? (or just random?), but really bad learning. Good line counts, maybe 10% of games cleared a single line. Played around 48 hours
+
+
+=======================
+self.model = Sequential()
+self.model.add(Convolution2D(64, 5, 5,
+                              activation='tanh',
+                              subsample=(1,1),
+                              init='uniform',
+                              input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+self.model.add(Flatten())
+self.model.add(Dropout(0.5))
+self.model.add(Dense(128, activation='tanh', init='uniform'))
+self.model.add(Dropout(0.5))
+self.model.add(Dense(128, activation='tanh', init='uniform'))
+self.model.add(Dropout(0.5))
+self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
+optim = SGD(lr=0.1, decay=0.0, momentum=0.5, nesterov=True)
+self.model.compile(loss='mae', optimizer=optim)
+
+Loss - Slight linear decrease over 1,200 games, 6.1 - 5.9)
+Score - Flat around -2
+Q-Value - Flat, around 13
+Notes - Bad policy, very slow learning. 0 lines after 1,200 games. Changing the learning rate didnt seem to help. Keep playing to 5 or 10 thousand
+
+
+====================== March 17
+self.model = Sequential()
+self.model.add(Convolution2D(32, 4, 4,
+                                      activation='tanh',
+                                      subsample=(1,1),
+                                      init='uniform',
+                                      input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+self.model.add(Flatten())
+self.model.add(Dropout(0.5))
+self.model.add(Dense(256, activation='tanh', init='uniform'))
+self.model.add(Dropout(0.5))
+self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
+optim = SGD(lr=0.1, decay=0.0, momentum=0.5, nesterov=True)
+self.model.compile(loss='mae', optimizer=optim)
+
+
+Loss - Converged towards 0.2, but now it's oscillating
+Q-Value - Decreasing constantly, but it's oscillating
+Score - Terrible score, -14, seems to be oscillating. Not great lines.
+Notes - Change scoring approach - we'll add game totals before storing as interesting episodes. This is pretty much the DQN architecture.
+
+
+========================= March 17
+self.model = Sequential()
+self.model.add(Convolution2D(32, 4, 4,
+    activation='tanh',
+    subsample=(1,1),
+    init='uniform',
+    input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+self.model.add(Convolution2D(32, 4, 4,
+	activation='tanh',
+    subsample=(1,1),
+    init='uniform'))
+self.model.add(Flatten())
+self.model.add(Dropout(0.5))
+self.model.add(Dense(256, activation='tanh', init='uniform'))
+self.model.add(Dropout(0.5))
+self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
+optim = SGD(lr=0.1, decay=0.0, momentum=0.5, nesterov=True)
+self.model.compile(loss='mae', optimizer=optim)
+
+
+Loss - Not enough time, converged to 0.2 but probably begins oscillating
+Score - Terrible score, -12, ditto, oscillating like above.
+Lines - On par with random agent
+Notes - Added the game to all episodes, at a multiple of 0.5! The function converged, but began oscillating
+
+
+========================== March 18
+self.model = Sequential()
+self.model.add(Convolution2D(32, 4, 4,
+	activation='tanh',
+    subsample=(1,1),
+    init='uniform',
+    input_shape=(1,BOARD_HEIGHT,BOARD_WIDTH)))
+self.model.add(Convolution2D(32, 4, 4,
+    activation='tanh',
+    subsample=(1,1),
+	init='uniform'))
+self.model.add(Flatten())
+self.model.add(Dropout(0.5))
+self.model.add(Dense(256, activation='tanh', init='uniform'))
+self.model.add(Dropout(0.5))
+self.model.add(Dense(len(POSSIBLE_MOVES), activation='linear', init='he_uniform'))
+optim = SGD(lr=0.1, decay=1e-7, momentum=0.5, nesterov=True)
+self.model.compile(loss='mae', optimizer=optim)
+		
+Notes - 
+1st/2nd run -Took the same model, played with a pure random start and a pure random start that prefers not choosing move down. Neither worked well. I think the discount is too high, not assigning good blame to individual moves. The loss converged around 0.1, q-value around 0, and the score around -14, for both attempts.
+**DECISION** When exploring, have a random bias AGAINST moving down, should lead to more exploration. Have been waffling back and forth for too long.
+
+3rd - Turned discount to 0.75, but instead of 0.75^i, I am doing 0.75^(3i + 1). The game score is added as score * 0.1 to all rewards. 100 game warmup, settle at epsilon 0.9 at 500 games. Buffer of 100,000, 2500 replays at game over.
+Results - Promising. Score around 0, avg q-value increasing from -0.8, some lines, loss at 0.1. Continuing to watch.
+
+4th - Less of a warmup, 50 game warmup, at 100 games we settle to 0.9 epsilon. 50,000 buffer, 1000 replays at game over.
+Results - Poor. Loss converges to 0, Q-value decreasing at -0.6, score converged at -15. This lack of warmup I think
+
+5th - Copy the 3rd run. Use half the learning rate. Decrease the warmup a little, store only 50,000 buffer.
+
+

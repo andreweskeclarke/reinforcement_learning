@@ -52,8 +52,8 @@ path {
 
 <!-- load the d3.js library -->    
 <script src="http://d3js.org/d3.v3.min.js"></script>
-<script src="//code.jquery.com/jquery-1.12.0.min.js"></script>
-<script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+<script src="http://code.jquery.com/jquery-1.12.0.min.js"></script>
+<script src="http://code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
 
 
 <script>
@@ -163,7 +163,8 @@ window.setInterval(function(){
 }, 60000);
 
 var socketSetup = function(port, elementId) {
-    var ws = new WebSocket('ws://52.53.253.15:' + port)
+    // var ws = new WebSocket('ws://52.53.253.15:' + port)
+    var ws = new WebSocket('ws://' + window.location.hostname + ':' + port)
     var scale = 10;
     var boardW = 10;
     var boardH = 20;
@@ -187,7 +188,7 @@ var socketSetup = function(port, elementId) {
 };
 
 socketSetup(8080, "#liveView1");
-socketSetup(8081, "#liveView2");
+// socketSetup(8081, "#liveView2");
 
 </script>
 

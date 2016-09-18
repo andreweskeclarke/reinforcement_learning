@@ -15,7 +15,8 @@ class ReinforcementAgent(Agent):
     def epsilon(self):
         return min([0.9, self.n_games / 50])
 
-    def choose_action(self, state):
+    def choose_action(self, board):
+        state = Board.copy_state(board, board.current_tetronimo)
         if self.exploiting_turn: 
             return random.choice(POSSIBLE_MOVES)
         action = np.zeros(len(POSSIBLE_MOVES))
@@ -44,7 +45,7 @@ class ReinforcementAgent(Agent):
                 self.rewards[index] += float(reward) * (DISCOUNT**(i - n_ineffective_actions))
         self.current_episode_length = 0
 
-    def on_episode_end(self, reward):
+    def on_episode_end(self, reward, episode_length):
         self.store_episode_information(reward)
         self.exploiting_turn = self.exploit()
 

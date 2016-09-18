@@ -1,19 +1,19 @@
-import queue
-import threading
-import time
-from tetris_game import *
-from agents.tetris_agent import *
-from agents.reinforcement_agent import *
-from agents.state_value_agent import *
-from agents.piece_prediction_agent import *
 import argparse
 
+from agents.piece_prediction_agent import *
+from agents.reinforcement_agent import *
+from agents.state_value_agent import *
+from agents.state_value_prediction_agent import *
+from agents.tetris_agent import *
+
+from tetris_game import *
 
 AGENTS = {
     'reinforcement': ReinforcementAgent,
     'random': RandomAgent,
     'piece_prediction': PiecePredictionAgent,
     'state_value_agent': StateValueAgent,
+    'state_value_prediction_agent': StateValuePredictionAgent,
 }
 
 def main():

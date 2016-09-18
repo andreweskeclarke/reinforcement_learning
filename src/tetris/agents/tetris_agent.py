@@ -75,7 +75,7 @@ class Agent():
     def game_over(self, total_reward):
         raise NotImplementedError()
 
-    def on_episode_end(self, reward):
+    def on_episode_end(self, reward, episode_length):
         raise NotImplementedError()
 
     def rolled_over(self):
@@ -102,7 +102,7 @@ class Agent():
     def handle(self, state0, action, reward, state1):
         self.states_t0[self.current_pos] = state0
         self.actions[self.current_pos] = action
-        self.rewards[self.current_pos] = 0
+        self.rewards[self.current_pos] = reward
         self.states_t1[self.current_pos] = state1
         self.tick_forward()
 
@@ -123,11 +123,11 @@ class RandomAgent(Agent):
     def __init__(self, model_name):
         super().__init__(model_name)
 
-    def choose_action(self, state):
+    def choose_action(self, board):
         return random.choice(POSSIBLE_MOVES)
         
     def game_over(self, total_reward):
         self.state_printer.print(self.states_t1[self.current_pos - 1])
 
-    def on_episode_end(self, reward):
+    def on_episode_end(self, reward, episode_length):
         self.state_printer.print(self.states_t1[self.current_pos - 1])

@@ -73,6 +73,7 @@ def dense_value_prediction():
     model.compile()
     return model
 
+
 def dense_piece_prediction():
     layer1_input = len(POSSIBLE_MOVES) + BOARD_HEIGHT * BOARD_WIDTH
     model = tetris_theano.Model([
