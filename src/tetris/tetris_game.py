@@ -135,11 +135,11 @@ class Board:
             if self.tetronimo_settled():
                 n_cleared_rows = self.__freeze_tetronimo__()
                 if n_cleared_rows > 0:
-                    points = [0, 20, 40, 60, 100][n_cleared_rows]
+                    points = [0, 20, 50, 125, 300][n_cleared_rows]
                 elif self.current_height <= old_height:
                     points = 2
                 else:
-                    points = -2
+                    points = 0
         return points, n_cleared_rows
 
     @classmethod

@@ -1,6 +1,7 @@
-from agents.reinforcement_agent import *
+from src.tetris.agents.tetris_agent import *
 
-STATE_VALUE_AGENT_DISCOUNT = 0.8
+
+STATE_VALUE_AGENT_DISCOUNT = 0.5
 
 
 class StateValuePredictionAgent(ReinforcementAgent):
@@ -16,7 +17,7 @@ class StateValuePredictionAgent(ReinforcementAgent):
         return random.random() < self.epsilon()
 
     def epsilon(self):
-        return 0.9
+        return 0.95
 
     def choose_action(self, board):
         if not self.exploiting_turn: 
@@ -59,7 +60,6 @@ class StateValuePredictionAgent(ReinforcementAgent):
         sys.stdout.flush()
 
     def rolled_over(self):
-        indexes = [random.randint(0,BUFFER_SIZE) for i in range(0,20)]
         for i in range(0,2):
             self.train(0.8)
 
