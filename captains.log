@@ -1,3 +1,7 @@
+Sept 18, 2016
+
+Small steps - first was able to predict screens based on previous screens + action (learning rate was 0.001 on the dense piece prediction model)
+
 Feb 21, 2016
 
 Was using the following:

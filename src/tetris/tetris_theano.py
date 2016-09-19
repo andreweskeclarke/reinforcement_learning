@@ -128,7 +128,7 @@ class Model(object):
     def squared_error(self, x, a, y):
         return T.sum((self.output(x, a) - y) ** 2)
 
-    def sgd(self, cost, params, lr=0.001):
+    def sgd(self, cost, params, lr=0.0001):
         grads = T.grad(cost=cost, wrt=params)
         updates = []
         for p, g in zip(params, grads):

@@ -1,4 +1,5 @@
-from src.tetris.agents.tetris_agent import *
+from agents.tetris_agent import *
+from agents.reinforcement_agent import *
 
 
 STATE_VALUE_AGENT_DISCOUNT = 0.5
