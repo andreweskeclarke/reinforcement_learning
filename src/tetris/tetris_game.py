@@ -16,8 +16,8 @@ MOVE_LEFT = 3
 MOVE_DOWN = 4
 DO_NOTHING = 5
 
-BOARD_HEIGHT = 20
-BOARD_WIDTH = 10
+BOARD_HEIGHT = 12
+BOARD_WIDTH = 6
 
 MOVES_MAP = [ lambda x:x.rotate_left(),
               lambda x:x.rotate_right(),
@@ -168,9 +168,10 @@ class Tetris:
         if screen is not None:
             self.init_colors()
         running_scores = deque([], N_ROLLING_AVG)
+        n_total_moves = 0
         n_games = 0
         total_start_time = time.time()
-        print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy, training_runs, n_pieces, time')
+        print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy, training_runs, n_pieces, n_total_moves, time')
         while self.agent.should_continue():
             board = Board()
             continue_game = True
@@ -181,10 +182,11 @@ class Tetris:
             reward = 0
             self.n_cleared = 0
             n_pieces = 0
-            while continue_game and n_pieces < 50:
+            while continue_game:
                 n_pieces += 1
-                continue_game, episode_reward = self.play_episode(board)
+                continue_game, episode_reward, episode_length = self.play_episode(board)
                 reward += episode_reward
+                n_total_moves += episode_length
 
             running_scores.append(reward)
             n_games += 1
@@ -203,8 +205,7 @@ class Tetris:
                 if hasattr(self.agent, 'recent_losses') and len(self.agent.recent_losses) > 0:
                     avg_loss = self.agent.recent_losses[-1]
                     avg_accuracy = self.agent.recent_accuracies[-1]
-                #print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy')
-                print('output: {}, {}, {}, {}, {}, {}, {}, {}, {}'.format(n_games, reward, avg_q_value, self.n_cleared, avg_loss, avg_accuracy, 0, n_pieces, time.time() - total_start_time))
+                print('output: {}, {}, {}, {}, {}, {}, {}, {}, {}, {}'.format(n_games, reward, avg_q_value, self.n_cleared, avg_loss, avg_accuracy, 0, n_pieces, n_total_moves, time.time() - total_start_time))
 
     def play_episode(self, board):
         episode_reward = 0
@@ -234,9 +235,9 @@ class Tetris:
                 tetronimo = self.generate_tetronimo(board)
                 if board.can_place_piece(tetronimo):
                     board.start_tetronimo(tetronimo)
-                    return True, episode_reward
+                    return True, episode_reward, episode_length
                 else:
-                    return False, episode_reward
+                    return False, episode_reward, episode_length
             else:
                 state_t1 = Board.copy_state(board, board.tetronimo)
                 self.agent.handle(state_t0, action, -1, state_t1)

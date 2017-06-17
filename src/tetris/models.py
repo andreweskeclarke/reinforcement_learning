@@ -18,7 +18,7 @@ def compile(model_name):
 def action_advantage():
     layer1_input = 128 * (12) * (2)
     model = tetris_theano.Model([
-        tetris_theano.Conv2DLayer(32, 3, 3, 1, 10, 20),
+        tetris_theano.Conv2DLayer(32, 3, 3, 1, BOARD_WIDTH, BOARD_HEIGHT),
         tetris_theano.Conv2DLayer(32, 3, 3, 32, 8, 18),
         tetris_theano.Conv2DLayer(64, 3, 3, 32, 6, 16),
         tetris_theano.Conv2DLayer(128, 2, 2, 64, 4, 14),
@@ -35,10 +35,10 @@ def action_advantage():
 
 
 def dqn():
-    conv_output_size = 6 * 16 * 32 * 16
+    conv_output_size = (BOARD_HEIGHT - 4) * (BOARD_WIDTH - 4) * 32 * 16
     model = tetris_theano.Model([
-        tetris_theano.Conv2DLayer(16, 3, 3, 1, 10, 20),
-        tetris_theano.Conv2DLayer(32, 3, 3, 1, 8, 18),
+        tetris_theano.Conv2DLayer(16, 3, 3, 1, BOARD_WIDTH, BOARD_HEIGHT),
+        tetris_theano.Conv2DLayer(32, 3, 3, 1, BOARD_WIDTH - 2, BOARD_HEIGHT - 2),
         tetris_theano.Flatten(),
         tetris_theano.DenseLayer(conv_output_size, 256),
         tetris_theano.DenseLayer(256, len(POSSIBLE_MOVES))
@@ -102,11 +102,11 @@ def dense_piece_prediction():
 
 
 def dqn_piece_prediction():
-    conv_output_size = 6 * 16 * 32 * 16
+    conv_output_size = (BOARD_HEIGHT - 4) * (BOARD_WIDTH - 4) * 32 * 16
     layer1_input = len(POSSIBLE_MOVES) + conv_output_size
     model = tetris_theano.Model([
-        tetris_theano.Conv2DLayer(16, 3, 3, 1, 10, 20),
-        tetris_theano.Conv2DLayer(32, 3, 3, 1, 8, 18),
+        tetris_theano.Conv2DLayer(16, 3, 3, 1, BOARD_WIDTH, BOARD_HEIGHT),
+        tetris_theano.Conv2DLayer(32, 3, 3, 1, BOARD_WIDTH - 2, BOARD_HEIGHT - 2),
         tetris_theano.Flatten(),
         tetris_theano.StateAndActionMerge(),
         tetris_theano.DenseLayer(layer1_input, 256),
@@ -120,7 +120,7 @@ def super_deep_piece_prediction():
     conv_output_size = 2 * 12 * 128
     layer1_input = len(POSSIBLE_MOVES) + conv_output_size
     model = tetris_theano.Model([
-        tetris_theano.Conv2DLayer(64, 3, 3, 1, 10, 20),
+        tetris_theano.Conv2DLayer(64, 3, 3, 1, BOARD_WIDTH, BOARD_HEIGHT),
         tetris_theano.Conv2DLayer(128, 3, 3, 1, 8, 18),
         tetris_theano.Conv2DLayer(256, 3, 3, 1, 6, 16),
         tetris_theano.Conv2DLayer(128, 3, 3, 1, 4, 14),
