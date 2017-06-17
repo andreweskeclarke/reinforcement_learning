@@ -4,7 +4,7 @@ from agents.reinforcement_agent import *
 EMPTY_ACTIONS = np.zeros(len(POSSIBLE_MOVES))
 TARGET_NET_UPDATE_FREQUENCY = 30000
 EGREEDY_EPSILON = 0.9
-N_INITIAL_RANDOM_MOVES = 10000
+N_INITIAL_RANDOM_MOVES = 50000
 BATCH_SIZE = 8
 
 class QAgent(Agent):
@@ -14,11 +14,13 @@ class QAgent(Agent):
         self.exploiting_turn = bool(random.getrandbits(1))
         self.total_moves_performed = 0
         self.total_games_played = 0
+        self.recent_q_values = deque([], N_ROLLING_AVG)
 
     def choose_action(self, board):
         if self.__should_exploit(): 
             state = Board.copy_state(board, board.tetronimo)
             q_values = self.model.predict(state, EMPTY_ACTIONS)
+            self.recent_q_values.append(np.max(q_values))
             return np.argmax(q_values)
         return random.choice(POSSIBLE_MOVES)
 

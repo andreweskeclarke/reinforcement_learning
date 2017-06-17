@@ -20,6 +20,11 @@ Takes advantage of a Kears/Theano/Cuda stack to learn a neural net Q-function.
 python src/tetris/simulation.py
 ```
 
+To run the debugging web app, install socat and websocketd, then run:
+```bash
+websocketd --port=8080 ./socket_server.sh
+```
+
 # Monte Carlo Blackjack (Chapter 5)
 Uses e-greedy methods to find an optimal action value function and policy.
 

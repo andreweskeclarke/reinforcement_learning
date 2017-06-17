@@ -229,14 +229,16 @@ class Tetris:
 
             if board.tetronimo_settled():
                 state_t1 = Board.copy_state(board, board.tetronimo)
-                self.agent.handle(state_t0, action, episode_reward, state_t1)
                 self.agent.on_episode_end(episode_reward, episode_length)
 
                 tetronimo = self.generate_tetronimo(board)
                 if board.can_place_piece(tetronimo):
+                    self.agent.handle(state_t0, action, episode_reward, state_t1)
                     board.start_tetronimo(tetronimo)
                     return True, episode_reward, episode_length
                 else:
+                    self.agent.handle(state_t0, action, -20, state_t1)
+                    episode_reward += -20
                     return False, episode_reward, episode_length
             else:
                 state_t1 = Board.copy_state(board, board.tetronimo)
