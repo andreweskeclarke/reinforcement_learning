@@ -4,13 +4,13 @@ from agents.reinforcement_agent import *
 EMPTY_ACTIONS = np.zeros(len(POSSIBLE_MOVES))
 TARGET_NET_UPDATE_FREQUENCY = 30000
 EGREEDY_EPSILON = 0.9
-N_INITIAL_RANDOM_MOVES = 50000
+N_INITIAL_RANDOM_MOVES = 10000
 BATCH_SIZE = 8
 
 class QAgent(Agent):
     def __init__(self, model_name):
         super().__init__(model_name)
-        self.target_model = self.model
+        self.target_model = self.model.copy()
         self.exploiting_turn = bool(random.getrandbits(1))
         self.total_moves_performed = 0
         self.total_games_played = 0

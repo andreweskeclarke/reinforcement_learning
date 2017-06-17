@@ -3,8 +3,9 @@ import time
 import os
 import sys
 import timeit
-import numpy as np
+import pickle
 import theano
+import numpy as np
 import theano.tensor as T
 from tetris_game import POSSIBLE_MOVES
 from theano.tensor.nnet.conv import conv2d
@@ -113,6 +114,21 @@ class Model(object):
             for l in layers:
                 self.params += l.params
 
+    def copy(self):
+        model = Model(self.layers)
+        model.train_function = self.__copy_theano(self.train_function)
+        model.predict_function = self.__copy_theano(self.predict_function)
+        return model
+
+    def __copy_theano(self, theano_f):
+        sys.setrecursionlimit(5000)
+        pickle.dump(theano_f,
+            open('/tmp/theano_model.p', 'wb'), 
+            protocol=pickle.HIGHEST_PROTOCOL)
+        copied_f = pickle.load(open('/tmp/theano_model.p', 'rb'))
+        sys.setrecursionlimit(1000)
+        return copied_f
+
     def add_layer(self, layer):
         self.layers.append(layer)
         self.params += layer.params
@@ -150,9 +166,7 @@ class Model(object):
                                                 output_function,
                                                 on_unused_input='ignore',
                                                 allow_input_downcast=True)
-
-    def copy(self):
-        return Model
+        return self
 
     def train(self, X, A, Y, n_epochs):
         start = time.time()
