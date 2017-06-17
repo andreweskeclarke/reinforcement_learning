@@ -136,10 +136,7 @@ class Board:
                 n_cleared_rows = self.__freeze_tetronimo__()
                 if n_cleared_rows > 0:
                     points = [0, 20, 50, 125, 300][n_cleared_rows]
-                elif self.current_height <= old_height:
-                    points = 2
-                else:
-                    points = 0
+                points += 1
         return points, n_cleared_rows
 
     @classmethod
@@ -172,7 +169,8 @@ class Tetris:
             self.init_colors()
         running_scores = deque([], N_ROLLING_AVG)
         n_games = 0
-        print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy, training_runs, epsilon, n_pieces')
+        total_start_time = time.time()
+        print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy, training_runs, n_pieces, time')
         while self.agent.should_continue():
             board = Board()
             continue_game = True
@@ -206,7 +204,7 @@ class Tetris:
                     avg_loss = self.agent.recent_losses[-1]
                     avg_accuracy = self.agent.recent_accuracies[-1]
                 #print('output: n_game, avg_score, avg_q_value, n_lines, loss, accuracy')
-                print('output: {}, {}, {}, {}, {}, {}, {}, {}, {}'.format(n_games, reward, avg_q_value, self.n_cleared, avg_loss, avg_accuracy, 0, self.agent.epsilon(), n_pieces))
+                print('output: {}, {}, {}, {}, {}, {}, {}, {}, {}'.format(n_games, reward, avg_q_value, self.n_cleared, avg_loss, avg_accuracy, 0, n_pieces, time.time() - total_start_time))
 
     def play_episode(self, board):
         episode_reward = 0

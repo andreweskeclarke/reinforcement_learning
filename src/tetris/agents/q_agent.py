@@ -4,8 +4,8 @@ from agents.reinforcement_agent import *
 EMPTY_ACTIONS = np.zeros(len(POSSIBLE_MOVES))
 TARGET_NET_UPDATE_FREQUENCY = 10000
 EGREEDY_EPSILON = 0.9
-N_INITIAL_RANDOM_MOVES = 100000
-BATCH_SIZE = 32
+N_INITIAL_RANDOM_MOVES = 10000
+BATCH_SIZE = 8
 
 class QAgent(Agent):
     def __init__(self, model_name):
@@ -24,8 +24,6 @@ class QAgent(Agent):
 
     def game_over(self, total_reward):
         self.total_games_played += 1
-        print('Played %d games (%d moves)' % 
-            (self.total_games_played, self.total_moves_performed))
 
     def on_episode_end(self, reward, episode_length):
         self.state_printer.print(self.states_t1[self.current_pos - 1])
