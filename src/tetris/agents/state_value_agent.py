@@ -11,7 +11,7 @@ class StateValueAgent(ReinforcementAgent):
         self.recent_losses = deque([], N_ROLLING_AVG)
         self.exploiting_turn = bool(random.getrandbits(1))
 
-    def exploit(self):
+    def should_exploit(self):
         return random.random() < self.epsilon()
 
     def epsilon(self):
@@ -56,7 +56,7 @@ class StateValueAgent(ReinforcementAgent):
 
     def on_episode_end(self, reward, episode_length):
         self.store_episode_information(reward)
-        self.exploiting_turn = self.exploit()
+        self.exploiting_turn = self.should_exploit()
 
     def experience_replay(self):
         sys.stdout.flush()

@@ -2,7 +2,7 @@ from agents.tetris_agent import *
 from agents.reinforcement_agent import *
 
 
-STATE_VALUE_AGENT_DISCOUNT = 0.5
+STATE_VALUE_AGENT_DISCOUNT = 0.8
 
 
 class StateValuePredictionAgent(ReinforcementAgent):
@@ -14,7 +14,7 @@ class StateValuePredictionAgent(ReinforcementAgent):
         self.recent_losses = deque([], N_ROLLING_AVG)
         self.exploiting_turn = bool(random.getrandbits(1))
 
-    def exploit(self):
+    def should_exploit(self):
         return random.random() < self.epsilon()
 
     def epsilon(self):
@@ -55,7 +55,7 @@ class StateValuePredictionAgent(ReinforcementAgent):
 
     def on_episode_end(self, reward, episode_length):
         self.store_episode_information(reward, episode_length)
-        self.exploiting_turn = self.exploit()
+        self.exploiting_turn = self.should_exploit()
 
     def experience_replay(self):
         sys.stdout.flush()

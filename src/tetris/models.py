@@ -35,14 +35,12 @@ def action_advantage():
 
 
 def dqn():
-    conv_output_size = 6 * 16 * 32
-    layer1_input = len(POSSIBLE_MOVES) + conv_output_size
+    conv_output_size = 6 * 16 * 32 * 16
     model = tetris_theano.Model([
         tetris_theano.Conv2DLayer(16, 3, 3, 1, 10, 20),
         tetris_theano.Conv2DLayer(32, 3, 3, 1, 8, 18),
         tetris_theano.Flatten(),
-        tetris_theano.StateAndActionMerge(),
-        tetris_theano.DenseLayer(layer1_input, 256),
+        tetris_theano.DenseLayer(conv_output_size, 256),
         tetris_theano.DenseLayer(256, len(POSSIBLE_MOVES))
     ])
     model.compile()

@@ -151,6 +151,9 @@ class Model(object):
                                                 on_unused_input='ignore',
                                                 allow_input_downcast=True)
 
+    def copy(self):
+        return Model
+
     def train(self, X, A, Y, n_epochs):
         start = time.time()
         epoch = 0
@@ -158,5 +161,5 @@ class Model(object):
             for x, a, y in zip(X, A, Y):
                 current_cost = self.train_function(x, a, y)
             epoch += 1
-        print('Training {} samples over {} epochs took {}s'.format(X.shape[0], n_epochs, time.time() - start))
+        # print('Training {} samples over {} epochs took {}s'.format(X.shape[0], n_epochs, time.time() - start))
         return current_cost

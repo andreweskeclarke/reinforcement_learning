@@ -5,6 +5,7 @@ from agents.reinforcement_agent import *
 from agents.state_value_agent import *
 from agents.state_value_prediction_agent import *
 from agents.tetris_agent import *
+from agents.q_agent import *
 
 from tetris_game import *
 
@@ -14,6 +15,7 @@ AGENTS = {
     'piece_prediction': PiecePredictionAgent,
     'state_value_agent': StateValueAgent,
     'state_value_prediction_agent': StateValuePredictionAgent,
+    'q_agent': QAgent,
 }
 
 def main():

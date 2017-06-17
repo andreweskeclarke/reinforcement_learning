@@ -242,6 +242,7 @@ class Tetris:
             else:
                 state_t1 = Board.copy_state(board, board.tetronimo)
                 self.agent.handle(state_t0, action, -1, state_t1)
+            self.agent.on_move_end()
 
     def reset_tetronimos(self):
         self.tetronimos = [T, L, J, O, I, S, Z, T, L, J, O, I, S, Z] # Official rules

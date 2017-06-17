@@ -23,8 +23,8 @@ REWARD_INDEX = 2
 STATE1_INDEX = 3
 
 N_REPLAYS_PER_ROUND = 2000
-BUFFER_SIZE = 5000
-DISCOUNT = 0.5
+BUFFER_SIZE = 1000000
+DISCOUNT = 0.99
 BROADCAST_PORT = 50005
 DEBUG=False
 
@@ -77,6 +77,9 @@ class Agent():
 
     def on_episode_end(self, reward, episode_length):
         raise NotImplementedError()
+
+    def on_move_end(self):
+        pass
 
     def rolled_over(self):
         pass
