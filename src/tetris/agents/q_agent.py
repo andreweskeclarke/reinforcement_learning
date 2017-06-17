@@ -2,9 +2,9 @@ import ipdb
 from agents.reinforcement_agent import *
 
 EMPTY_ACTIONS = np.zeros(len(POSSIBLE_MOVES))
-TARGET_NET_UPDATE_FREQUENCY = 10000
+TARGET_NET_UPDATE_FREQUENCY = 30000
 EGREEDY_EPSILON = 0.9
-N_INITIAL_RANDOM_MOVES = 10000
+N_INITIAL_RANDOM_MOVES = 50000
 BATCH_SIZE = 8
 
 class QAgent(Agent):
@@ -49,6 +49,7 @@ class QAgent(Agent):
 
     def __update_target_model(self):
         if self.total_moves_performed % TARGET_NET_UPDATE_FREQUENCY == 0:
+            print('Copy over the target network')
             self.target_model = self.model.copy()
 
     def __training_data_for_indexes(self, indexes):
