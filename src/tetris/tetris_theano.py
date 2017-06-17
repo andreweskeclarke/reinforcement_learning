@@ -142,7 +142,13 @@ class Model(object):
         return self.predict_function(x, a)
 
     def squared_error(self, x, a, y):
-        return T.sum((self.output(x, a) - y) ** 2)
+        result, updates = theano.scan(
+            fn=lambda xx, aa, yy: (self.output(xx, aa) - yy) ** 2,
+            outputs_info=None,
+            sequences=[x,a,y]
+            )
+        return T.sum(result)
+        # return T.sum((self.output(x, a) - y) ** 2)
 
     def sgd(self, cost, params, lr=0.0001):
         grads = T.grad(cost=cost, wrt=params)
@@ -152,28 +158,23 @@ class Model(object):
         return updates
 
     def compile(self):
-        x_train = T.tensor3('x_train')
-        actions = T.vector('actions')
-        y_train = T.vector('y_train')
-        cost_function = self.squared_error(x_train, actions, y_train)
-        self.train_function = theano.function([x_train, actions, y_train],
+        x_train = T.tensor4('x_train')
+        actions_train = T.matrix('actions_train')
+        y_train = T.matrix('y_train')
+        cost_function = self.squared_error(x_train, actions_train, y_train)
+        self.train_function = theano.function([x_train, actions_train, y_train],
                                 cost_function,
                                 updates=self.sgd(cost_function, self.params),
                                 on_unused_input='ignore',
                                 allow_input_downcast=True)
-        output_function = self.output(x_train, actions)
-        self.predict_function = theano.function([x_train, actions],
+        x_pred = T.tensor3('x_pred')
+        actions_pred = T.vector('actions_pred')
+        output_function = self.output(x_pred, actions_pred)
+        self.predict_function = theano.function([x_pred, actions_pred],
                                                 output_function,
                                                 on_unused_input='ignore',
                                                 allow_input_downcast=True)
         return self
 
     def train(self, X, A, Y, n_epochs):
-        start = time.time()
-        epoch = 0
-        while epoch < n_epochs:
-            for x, a, y in zip(X, A, Y):
-                current_cost = self.train_function(x, a, y)
-            epoch += 1
-        # print('Training {} samples over {} epochs took {}s'.format(X.shape[0], n_epochs, time.time() - start))
-        return current_cost
+        self.train_function(X, A, Y)
