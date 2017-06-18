@@ -25,6 +25,11 @@ To run the debugging web app, install socat and websocketd, then run:
 websocketd --port=8080 ./socket_server.sh
 ```
 
+To use SSH tunnel to watch the learning process on a different server:
+```bash
+ssh -L 8082:localhost:8080 <user@server;> -p 24
+```
+
 # Monte Carlo Blackjack (Chapter 5)
 Uses e-greedy methods to find an optimal action value function and policy.
 

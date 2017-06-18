@@ -25,16 +25,14 @@ def main():
     parser.add_argument('--state_model', help='Which network architecture to run')
     parser.add_argument('--value_model', help='Which network architecture to run')
     parser.add_argument('--watch', action='store_true', help='Run the newest models', required=False, default=False)
+    parser.add_argument('--saved_model_file', help='The location of the saved model to reload')
     args = parser.parse_args()
 
-    if args.watch:
-        a = GreedyAgent()
-        Tetris(a).play()
-    elif args.agent == 'state_value_agent':
+    if args.agent == 'state_value_agent':
         agent = AGENTS[args.agent](args.state_model, args.value_model)
         Tetris(agent).play()
     else:
-        agent = AGENTS[args.agent](args.model)
+        agent = AGENTS[args.agent](args.model, saved_model_file=args.saved_model_file, watch=args.watch)
         Tetris(agent).play()
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 import matplotlib
 matplotlib.use('Agg')
+import pickle
 import matplotlib.pyplot as plt
 import tetris_theano
 import models
@@ -35,7 +36,7 @@ def tbug(msg):
 
 class WebSocketPrinter:
     def __init__(self, broadcast_port=BROADCAST_PORT):
-        self.broadcast_port = broadcast_port
+        self.broadcast_port = int(os.environ.get('BROADCAST_PORT', BROADCAST_PORT))
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -48,8 +49,13 @@ class WebSocketPrinter:
 
 
 class Agent():
-    def __init__(self, model_name, max_training_batches=1):
-        self.init_model(model_name)
+    def __init__(self, model_name, saved_model_file=None, max_training_batches=1, watch=False):
+        self.saved_model_file = saved_model_file
+        if saved_model_file is not None:
+            print('Loading saved model from %s' % saved_model_file)
+            self.model = self.load_model(saved_model_file)
+        else:
+            self.init_model(model_name)
         # Treat as a ring buffer
         self.current_pos = 0
         self.max_pos = 0
@@ -111,6 +117,9 @@ class Agent():
 
     def init_model(self, model_name):
         self.model = models.compile(model_name)
+
+    def load_model(self, saved_model_file):
+        return pickle.load(open(saved_model_file, 'rb'))
 
     def should_continue(self):
         return self.n_training_batches < self.max_training_batches
