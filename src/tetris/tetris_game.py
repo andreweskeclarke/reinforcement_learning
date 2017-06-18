@@ -246,8 +246,9 @@ class Tetris:
             self.agent.on_move_end()
 
     def reset_tetronimos(self):
-        self.tetronimos = [T, L, J, O, I, S, Z, T, L, J, O, I, S, Z] # Official rules
-        random.shuffle(self.tetronimos)
+        # self.tetronimos = [T, L, J, O, I, S, Z, T, L, J, O, I, S, Z] # Official rules
+        # random.shuffle(self.tetronimos)
+        self.tetronimos = [O] * 50 # Simple test
 
     def generate_tetronimo(self, board):
         if len(self.tetronimos) == 0:
